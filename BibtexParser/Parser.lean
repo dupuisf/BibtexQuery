@@ -1,8 +1,8 @@
-import Lean4Bibtex.ParsecExtra
+import BibtexParser.ParsecExtra
 
 open Lean Parsec
 
-namespace Lean4Bibtex
+namespace BibtexParser
 
 /-- i.e. authors = "Binne, Chose and Truc, Machin" -/
 structure Tag where
@@ -99,6 +99,6 @@ def BibtexFile : Parsec (List Entry) := many' BibtexParser.entry
 --#eval (sepBy' asciiWordToLower (do ws; skipChar ','; ws)) "bla, foo, baz, ".mkIterator
 
 
-end Lean4Bibtex
+end BibtexParser
 
 open Lean

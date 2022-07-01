@@ -1,6 +1,6 @@
 import Lake
 open Lake DSL
 
-package «lean4-bibtex» {
+package «bibtex-parse» {
   -- add configuration options here
 }
