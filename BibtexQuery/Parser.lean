@@ -17,28 +17,37 @@ inductive Entry where
   | CommentType
 deriving Repr
 
+namespace Parser
+
 /-- The name of the bibtex entry (i.e. what goes in the cite command). -/
-def BibtexQuery.name : Parsec String := do
+def name : Parsec String := do
   let firstChar ← Parsec.asciiLetter
   let reste ← manyChars $ (asciiLetter <|> digit <|> pchar ':' <|> pchar '-')
   return firstChar.toString ++ reste
 
 /-- "article", "book", etc -/
-def BibtexQuery.class : Parsec String := do skipChar '@'; asciiWordToLower
+def classe : Parsec String := do skipChar '@'; asciiWordToLower
 
-def BibtexQuery.quotedContent : Parsec String := do 
+partial def bracedContentAux (acc : String) : Parsec String :=
+(do let c ← anyChar
+    if c = '{' then
+      let s ← bracedContentAux ""
+      bracedContentAux (acc ++ s)
+    else
+      if c = '}' then return acc
+      else bracedContentAux (acc ++ c.toString))
+
+def bracedContent : Parsec String := do 
+  skipChar '{'
+  bracedContentAux ""
+
+def quotedContent : Parsec String := do 
   skipChar '"'
   let s ← manyChars $ noneOf "\""
   skipChar '"'
   return (s.replace "\n" "").replace "\r" ""
 
-def BibtexQuery.bracedContent : Parsec String := do 
-  skipChar '{'
-  let s ← manyChars $ noneOf "}"
-  skipChar '}'
-  return (s.replace "\n" "").replace "\r" ""
-
-def BibtexQuery.month : Parsec String := do 
+def month : Parsec String := do 
   let s ← asciiWordToLower
   match s with
   | "jan" => return s
@@ -56,36 +65,37 @@ def BibtexQuery.month : Parsec String := do
   | _     => fail "Not a valid month"
 
 /-- The content field of a tag. TODO: deal with months. -/
-def BibtexQuery.tagContent : Parsec String := do 
+def tagContent : Parsec String := do 
   let c ← peek!
   if c.isDigit then manyChars digit else
-    if c.isAlpha then BibtexQuery.month else
+    if c.isAlpha then month else
       match c with
-      | '"' => BibtexQuery.quotedContent
-      | '{' => BibtexQuery.bracedContent
+      | '"' => quotedContent
+      | '{' => bracedContent
       | _   => fail "Tag content expected"
 
 /-- i.e. journal = {Journal of Musical Deontology} -/
-def BibtexQuery.tag : Parsec Tag := do 
-  let tagName ← asciiWordToLower
+def tag : Parsec Tag := do 
+  --let tagName ← asciiWordToLower
+  let tagName ← manyChars (asciiLetterToLower <|> pchar '_')
   ws; skipChar '='; ws
-  let tagContent ← BibtexQuery.tagContent
+  let tagContent ← tagContent
   return { Name := tagName, Content := tagContent }
 
-def BibtexQuery.outsideEntry : Parsec Unit := do let _ ← manyChars $ noneOf "@"
+def outsideEntry : Parsec Unit := do let _ ← manyChars $ noneOf "@"
 
 /-- A Bibtex entry. TODO deal with "preamble" and all that crap. -/
-def BibtexQuery.entry : Parsec Entry := do 
-  BibtexQuery.outsideEntry
-  let typeOfEntry ← BibtexQuery.class
+def entry : Parsec Entry := do 
+  outsideEntry
+  let typeOfEntry ← classe
   ws; skipChar '{'; ws
-  let nom ← BibtexQuery.name
+  let nom ← name
   skipChar ','; ws
-  let t : List Tag ← sepBy' BibtexQuery.tag (do ws; skipChar ','; ws)
+  let t : List Tag ← sepBy' tag (do ws; skipChar ','; ws)
   ws; skipChar '}'; ws
   return Entry.NormalType typeOfEntry nom t
 
-def BibtexFile : Parsec (List Entry) := many' BibtexQuery.entry
+def BibtexFile : Parsec (List Entry) := many' entry
 
 --#eval BibtexQuery.name "auTHOr23:z  ".mkIterator
 --#eval BibtexQuery.class "@ARTICLE ".mkIterator
@@ -98,6 +108,8 @@ def BibtexFile : Parsec (List Entry) := many' BibtexQuery.entry
 
 --#eval (sepBy' asciiWordToLower (do ws; skipChar ','; ws)) "bla, foo, baz, ".mkIterator
 
+
+end Parser
 
 end BibtexQuery
 

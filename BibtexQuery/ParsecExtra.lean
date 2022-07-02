@@ -6,6 +6,8 @@ namespace Lean.Parsec
 
 def noneOf (bad : String) : Parsec Char := Parsec.satisfy (fun z => ¬bad.contains z)
 
+def noneOfStr (bad : String) : Parsec String := manyChars (noneOf bad)
+
 --def Lean.Parsec.line : Parsec String := Parsec.manyChars $ Parsec.noneOf '\n'
 
 def eol : Parsec String := 
@@ -15,6 +17,11 @@ partial def manyCore' (p : Parsec α) (acc : List α) : Parsec (List α) :=
 (do manyCore' p (acc ++ [←p])) <|> pure acc
 
 def many' (p : Parsec α) : Parsec (List α) := Parsec.manyCore' p []
+
+partial def manyStrCore (p : Parsec String) (acc : String) : Parsec String := 
+(do manyStrCore p (acc ++ (←p))) <|> pure acc
+
+def manyStr (p : Parsec String) : Parsec String := manyStrCore p ""
 
 partial def sepByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) : 
   Parsec (List α) :=
@@ -44,6 +51,12 @@ def endBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
 def asciiLetterToLower : Parsec Char := do return (←asciiLetter).toLower
 
 def asciiWordToLower : Parsec String := manyChars asciiLetterToLower
+
+def between (op : Parsec α) (cl : Parsec α) (mid : Parsec β) : Parsec β := do 
+  let _ ← op
+  let s ← mid
+  let _ ← cl
+  return s
 
 
 end Lean.Parsec
