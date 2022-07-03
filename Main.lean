@@ -7,6 +7,7 @@ Author: Frédéric Dupuis
 import Std.Data.HashMap
 import BibtexQuery.Parser
 import BibtexQuery.String
+import BibtexQuery.Query
 
 open Lean BibtexQuery
 
@@ -35,8 +36,12 @@ Commands:
   q: print entries that match the given query (not yet implemented)
 "
 
-def printEntries (l : List Entry) : IO Unit :=
-  for e in l do
+def printEntries (ents : List Entry) : IO Unit :=
+  for e in ents do
+    IO.println e.toAbridgedRepr
+
+def printMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit :=
+  for e in ents do
     IO.println e.toAbridgedRepr
 
 def main : List String → IO Unit
@@ -58,6 +63,11 @@ def main : List String → IO Unit
   let parsed := BibtexQuery.Parser.BibtexFile (←IO.FS.readFile fname).iter
   match parsed with
   | Parsec.ParseResult.success pos res => printEntries res
+  | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
+| "l" :: (fname :: queries) => do 
+  let parsed := BibtexQuery.Parser.BibtexFile (←IO.FS.readFile fname).iter
+  match parsed with
+  | Parsec.ParseResult.success pos res => sorry
   | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
 | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
 
