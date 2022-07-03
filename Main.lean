@@ -22,8 +22,16 @@ def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
         | some _ => ⟨hsh, (key :: lst)⟩)
   dupl
 
+def printHelp := IO.println "FIXME This is a help message."
+
 def main : List String → IO Unit
-| ["d", fname]  => do
+| ["h"]           => printHelp
+| ["-h"]          => printHelp
+| ["--help"]      => printHelp
+| ["h", _]        => printHelp
+| ["-h", _]       => printHelp
+| ["--help", _]   => printHelp
+| ["d", fname]    => do
   let file ← IO.FS.readFile fname
   IO.println s!"Reading {fname} to find doubled keys"
   let parsed := BibtexQuery.Parser.BibtexFile file.mkIterator
@@ -31,12 +39,12 @@ def main : List String → IO Unit
   | Parsec.ParseResult.success pos res => 
     let lst := listDoublons res
     IO.println lst
-  | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
-| ["s", fname] => do
+  | Parsec.ParseResult.error pos err => IO.eprintln s!"Parse error at line {pos.lineNumber}: {err}"
+| ["s", fname]    => do
   let file ← IO.FS.readFile fname
   let parsed := BibtexQuery.Parser.BibtexFile file.mkIterator
   match parsed with
   | Parsec.ParseResult.success pos res => IO.print $ reprStr res
-  | Parsec.ParseResult.error pos err => IO.eprint s!"Erreur à la ligne {pos.lineNumber}: {err}"
-| _            => IO.eprintln "Invalid command-line arguments"
+  | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
+| _            => do IO.eprintln "Invalid command-line arguments"; printHelp
 
