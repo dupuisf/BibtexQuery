@@ -5,25 +5,11 @@ Author: Frédéric Dupuis
 -/
 
 import BibtexQuery.ParsecExtra
+import BibtexQuery.Entry
 
 open Lean Parsec
 
-namespace BibtexQuery
-
-/-- i.e. authors = "Binne, Chose and Truc, Machin" -/
-structure Tag where
-  Name : String
-  Content : String
-deriving Repr
-
-inductive Entry where
-  | NormalType (Class : String) (Name : String) (Tags : List Tag)
-  | StringType (Content : String)
-  | PreambleType (Content : String)
-  | CommentType
-deriving Repr
-
-namespace Parser
+namespace BibtexQuery.Parser
 
 /-- The name of the bibtex entry (i.e. what goes in the cite command). -/
 def name : Parsec String := do
@@ -45,7 +31,7 @@ partial def bracedContentAux (acc : String) : Parsec String :=
 
 def bracedContent : Parsec String := do 
   skipChar '{'
-  bracedContentAux ""
+  return ((←bracedContentAux "").replace "\n" "").replace "\r" ""
 
 def quotedContent : Parsec String := do 
   skipChar '"'
@@ -115,8 +101,6 @@ def BibtexFile : Parsec (List Entry) := many' entry
 --#eval (sepBy' asciiWordToLower (do ws; skipChar ','; ws)) "bla, foo, baz, ".mkIterator
 
 
-end Parser
-
-end BibtexQuery
+end BibtexQuery.Parser
 
 open Lean

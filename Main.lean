@@ -8,7 +8,7 @@ import Std.Data.HashMap
 import BibtexQuery.Parser
 import BibtexQuery.String
 
-open Lean
+open Lean BibtexQuery
 
 def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
   let keysOnly := parseRes.filterMap (fun entry => match entry with
@@ -31,8 +31,13 @@ Usage: bibtex-query command filename [args]
 Commands:
   h: print this help message
   d: check for duplicate entries
+  l: list all entries in abridged form
   q: print entries that match the given query (not yet implemented)
 "
+
+def printEntries (l : List Entry) : IO Unit :=
+  for e in l do
+    IO.println e.toAbridgedRepr
 
 def main : List String → IO Unit
 | ["h"]           => printHelp
@@ -49,10 +54,10 @@ def main : List String → IO Unit
     let lst := listDoublons res
     IO.println lst
   | Parsec.ParseResult.error pos err => IO.eprintln s!"Parse error at line {pos.lineNumber}: {err}"
-| ["s", fname]    => do
+| ["l", fname]    => do
   let parsed := BibtexQuery.Parser.BibtexFile (←IO.FS.readFile fname).iter
   match parsed with
-  | Parsec.ParseResult.success pos res => IO.print $ reprStr res
+  | Parsec.ParseResult.success pos res => printEntries res
   | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
 | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
 
