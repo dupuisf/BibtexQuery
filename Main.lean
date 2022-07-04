@@ -40,9 +40,16 @@ def printEntries (ents : List Entry) : IO Unit :=
   for e in ents do
     IO.println e.toAbridgedRepr
 
-def printMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit :=
+def printMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit := do
   for e in ents do
-    IO.println e.toAbridgedRepr
+    if e.matchQueries qs then IO.println e.toAbridgedRepr 
+
+def testPrintMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit := do
+  IO.println $ reprStr $ qs
+  for e in ents do
+    IO.println $ reprStr $ e
+    IO.println $ reprStr $ e.matchQueries qs
+
 
 def main : List String → IO Unit
 | ["h"]           => printHelp
@@ -64,10 +71,11 @@ def main : List String → IO Unit
   match parsed with
   | Parsec.ParseResult.success pos res => printEntries res
   | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
-| "l" :: (fname :: queries) => do 
+| "q" :: (fname :: queries) => do 
   let parsed := BibtexQuery.Parser.BibtexFile (←IO.FS.readFile fname).iter
   match parsed with
-  | Parsec.ParseResult.success pos res => sorry
+  | Parsec.ParseResult.success pos res => printMatchingEntries res $ queries.filterMap Query.ofString
+  --| Parsec.ParseResult.success pos res => testPrintMatchingEntries res $ queries.filterMap Query.ofString
   | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
 | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
 
