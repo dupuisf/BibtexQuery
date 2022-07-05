@@ -157,7 +157,11 @@ else
 def String.containsSubstr (s : String) (q : String) : Bool :=
 s.toSubstring.containsSubstrStartingAt q
 
-#eval "Dupuis, Frédéric and Fawzi, Omar".toFullNames.containsSubstr "blah"
+def String.pad (s : String) (c : Char) (n : Nat) : String :=
+(s ++ ⟨List.replicate n c⟩).take n
+
+
+--#eval "Dupuis, Frédéric and Fawzi, Omar".toFullNames.containsSubstr "blah"
 
 --#eval "Dupuis, Frédéric and Tomamichel, Marco and Pranab Sen".splitIntoNames.map String.flipName
 --#eval "Dupuis, Frédéric and Tomamichel, Marco and Pranab Sen".take 10

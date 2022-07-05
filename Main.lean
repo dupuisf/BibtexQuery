@@ -33,7 +33,15 @@ Commands:
   h: print this help message
   d: check for duplicate entries
   l: list all entries in abridged form
-  q: print entries that match the given query (not yet implemented)
+  q: print entries that match the given query
+
+Queries have the form «t.query» (without the quotes) with t being the type of query,
+and «query» being the content. The entries printed out are those that match all the queries.
+
+Types of queries:
+  k: key (ex: k.d14)
+  a: author (ex: a.dupuis)
+  t: title (ex: t.channelcapacity)
 "
 
 def printEntries (ents : List Entry) : IO Unit :=
@@ -43,13 +51,6 @@ def printEntries (ents : List Entry) : IO Unit :=
 def printMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit := do
   for e in ents do
     if e.matchQueries qs then IO.println e.toAbridgedRepr 
-
-def testPrintMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit := do
-  IO.println $ reprStr $ qs
-  for e in ents do
-    IO.println $ reprStr $ e
-    IO.println $ reprStr $ e.matchQueries qs
-
 
 def main : List String → IO Unit
 | ["h"]           => printHelp

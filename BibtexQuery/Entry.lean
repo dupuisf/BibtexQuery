@@ -43,7 +43,7 @@ def getKey : Entry → String
 | _ => "No key"
 
 def toAbridgedRepr (e : Entry) : String := 
-e.getKey ++ " | " ++ e.getAuthors.toLastNames ++ " | " ++ e.getTitle
+e.getKey.pad ' ' 25 ++ " | " ++ e.getAuthors.toLastNames.pad ' ' 50 ++ " | " ++ e.getTitle
 
 end Entry
 
