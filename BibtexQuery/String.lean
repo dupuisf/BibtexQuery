@@ -4,6 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Frédéric Dupuis
 -/
 
+/-!
+# String processing
+
+This file contains various string processing functions.
+-/
+
 /-- Get the line number of the current position of the iterator. -/
 def String.Iterator.lineNumber (it : String.Iterator) : Nat :=
   let s : Substring := ⟨it.toString, 0, it.pos⟩
@@ -159,11 +165,3 @@ s.toSubstring.containsSubstrStartingAt q
 
 def String.pad (s : String) (c : Char) (n : Nat) : String :=
 (s ++ ⟨List.replicate n c⟩).take n
-
-
---#eval "Dupuis, Frédéric and Fawzi, Omar".toFullNames.containsSubstr "blah"
-
---#eval "Dupuis, Frédéric and Tomamichel, Marco and Pranab Sen".splitIntoNames.map String.flipName
---#eval "Dupuis, Frédéric and Tomamichel, Marco and Pranab Sen".take 10
-
---#eval "Dupuis".flattenWords.containsSubstr "dup"

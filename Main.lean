@@ -9,6 +9,17 @@ import BibtexQuery.Parser
 import BibtexQuery.String
 import BibtexQuery.Query
 
+/-!
+# BibtexQuery: a simple command-line bibtex query utility
+
+BibtexQuery is a command-line utility that reads in a bibtex file and performs simple queries. A query is a string
+of the form "t.querystring", where `t` is either `a` for author, `t` for title or `k` for key, and `querystring`
+is a string (without spaces). BibtexQuery reads in a bibtex file, and returns the entries that match all the
+queries given a command-line parameters. Note that the entries are processed in such a way that strips diacritics,
+spaces and special characters before the queries are performed. In addition, the list of authors is normalized to
+firstnamelastname. Hence, for example, "Dupuis, Frédéric" will match the query `a.ericdup`.
+-/
+
 open Lean BibtexQuery
 
 def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
@@ -76,7 +87,6 @@ def main : List String → IO Unit
   let parsed := BibtexQuery.Parser.BibtexFile (←IO.FS.readFile fname).iter
   match parsed with
   | Parsec.ParseResult.success pos res => printMatchingEntries res $ queries.filterMap Query.ofString
-  --| Parsec.ParseResult.success pos res => testPrintMatchingEntries res $ queries.filterMap Query.ofString
   | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
 | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
 

@@ -7,6 +7,12 @@ Author: Frédéric Dupuis
 import BibtexQuery.String
 import BibtexQuery.Entry
 
+/-!
+# Bibtex Queries
+
+This file deals with bibtex queries of the limited form handled by the program.
+-/
+
 namespace BibtexQuery
 
 inductive Query where

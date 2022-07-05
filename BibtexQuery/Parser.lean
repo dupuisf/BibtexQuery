@@ -7,6 +7,14 @@ Author: Frédéric Dupuis
 import BibtexQuery.ParsecExtra
 import BibtexQuery.Entry
 
+/-!
+# Bibtex Parser
+
+This file contains a parser for the Bibtex format. Note that currently, only a subset of the official
+Bibtex format is supported; features such as predefined strings and concatenation using `#` are not
+supported.
+-/
+
 open Lean Parsec
 
 namespace BibtexQuery.Parser

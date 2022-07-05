@@ -6,6 +6,13 @@ Author: Frédéric Dupuis
 
 import BibtexQuery.String
 
+/-!
+# Bibtex Entries and related functions
+
+This file defines inductive types for bibtex entries and tags, along with various related
+helper functions.
+-/
+
 namespace BibtexQuery
 
 /-- i.e. authors = "Binne, Chose and Truc, Machin" -/
@@ -24,6 +31,7 @@ deriving Repr
 
 namespace Entry
 
+/-- Returns the authors of a bibtex entry, or an empty string if it is not specified. -/
 def getAuthors : (e : Entry) → String
 | NormalType cl name tags =>
   match tags.find? (fun t => t.Name = "author") with
@@ -31,6 +39,7 @@ def getAuthors : (e : Entry) → String
   | none   => ""
 | _ => ""
 
+/-- Returns the title of a bibtex entry, or an empty string if it is not specified. -/
 def getTitle : (e : Entry) → String
 | NormalType cl name tags =>
   match tags.find? (fun t => t.Name = "title") with
@@ -38,10 +47,12 @@ def getTitle : (e : Entry) → String
   | none   => ""
 | _ => ""
 
+/-- Returns the key of a bibtex entry. -/
 def getKey : Entry → String
 | NormalType cl name tags => name
 | _ => "No key"
 
+/-- Returns an abridged representation of a bibtex entry. -/
 def toAbridgedRepr (e : Entry) : String := 
 e.getKey.pad ' ' 25 ++ " | " ++ e.getAuthors.toLastNames.pad ' ' 50 ++ " | " ++ e.getTitle
 

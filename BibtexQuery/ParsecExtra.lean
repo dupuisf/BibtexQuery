@@ -6,6 +6,14 @@ Author: Frédéric Dupuis
 
 import Lean.Data.Parsec
 
+/-!
+# Extra Parsec material
+
+This file contains additional material for the Parsec library, some of which is modelled after its Haskell
+counterpart.
+-/
+
+
 open Lean
 
 namespace Lean.Parsec
