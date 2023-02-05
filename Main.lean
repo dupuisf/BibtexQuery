@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Frédéric Dupuis
 -/
 
-import Std.Data.HashMap
+import Std.Data.HashMap.Basic
 import BibtexQuery.Parser
 import BibtexQuery.String
 import BibtexQuery.Query
