@@ -28,39 +28,39 @@ def eol : Parsec String :=
   Parsec.pstring "\n\r" <|> Parsec.pstring "\r\n" <|> Parsec.pstring "\n"
 
 partial def manyCore' (p : Parsec α) (acc : List α) : Parsec (List α) :=
-(do manyCore' p (acc ++ [←p])) <|> pure acc
+  (do manyCore' p (acc ++ [←p])) <|> pure acc
 
 def many' (p : Parsec α) : Parsec (List α) := Parsec.manyCore' p []
 
 partial def manyStrCore (p : Parsec String) (acc : String) : Parsec String := 
-(do manyStrCore p (acc ++ (←p))) <|> pure acc
+  (do manyStrCore p (acc ++ (←p))) <|> pure acc
 
 def manyStr (p : Parsec String) : Parsec String := manyStrCore p ""
 
 partial def sepByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) : 
-  Parsec (List α) :=
-(do let _ ← psep; sepByCore pcont psep (acc ++ [←pcont])) <|> pure acc
+    Parsec (List α) :=
+  (do let _ ← psep; sepByCore pcont psep (acc ++ [←pcont])) <|> pure acc
 
 def sepBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
-do Parsec.sepByCore pcont psep [←pcont]
+  do Parsec.sepByCore pcont psep [←pcont]
 
 partial def fuckme (p : Parsec α) : Parsec α := attempt p <|> fail "fukcme"
 
 partial def sepByCore' (pcont : Parsec α) (psep : Parsec β) (acc : List α) : 
-  Parsec (List α) := 
-attempt (do let _ ← psep; sepByCore' pcont psep (acc ++ [←pcont]))
-<|> (do  let _ ← attempt psep; return acc)
-<|> pure acc
+    Parsec (List α) := 
+  attempt (do let _ ← psep; sepByCore' pcont psep (acc ++ [←pcont]))
+  <|> (do  let _ ← attempt psep; return acc)
+  <|> pure acc
 
 def sepBy' (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
-do Parsec.sepByCore' pcont psep [←pcont]
+  do Parsec.sepByCore' pcont psep [←pcont]
 
 partial def endByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
-  Parsec (List α) :=
-(do let x ← pcont; let _ ← psep; endByCore pcont psep (acc ++ [x])) <|> pure acc
+    Parsec (List α) :=
+  (do let x ← pcont; let _ ← psep; endByCore pcont psep (acc ++ [x])) <|> pure acc
 
 def endBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
-(do Parsec.endByCore pcont psep [])
+  (do Parsec.endByCore pcont psep [])
 
 def asciiLetterToLower : Parsec Char := do return (←asciiLetter).toLower
 

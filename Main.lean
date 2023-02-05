@@ -64,29 +64,29 @@ def printMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit := do
     if e.matchQueries qs then IO.println e.toAbridgedRepr 
 
 def main : List String → IO Unit
-| ["h"]           => printHelp
-| ["-h"]          => printHelp
-| ["--help"]      => printHelp
-| ["h", _]        => printHelp
-| ["-h", _]       => printHelp
-| ["--help", _]   => printHelp
-| ["d", fname]    => do
-  IO.println s!"Reading {fname} to find doubled keys"
-  let parsed := BibtexQuery.Parser.BibtexFile (←IO.FS.readFile fname).iter
-  match parsed with
-  | Parsec.ParseResult.success pos res => 
-    let lst := listDoublons res
-    IO.println lst
-  | Parsec.ParseResult.error pos err => IO.eprintln s!"Parse error at line {pos.lineNumber}: {err}"
-| ["l", fname]    => do
-  let parsed := BibtexQuery.Parser.BibtexFile (←IO.FS.readFile fname).iter
-  match parsed with
-  | Parsec.ParseResult.success pos res => printEntries res
-  | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
-| "q" :: (fname :: queries) => do 
-  let parsed := BibtexQuery.Parser.BibtexFile (←IO.FS.readFile fname).iter
-  match parsed with
-  | Parsec.ParseResult.success pos res => printMatchingEntries res $ queries.filterMap Query.ofString
-  | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
-| _            => do IO.eprintln "Invalid command-line arguments"; printHelp
+  | ["h"]           => printHelp
+  | ["-h"]          => printHelp
+  | ["--help"]      => printHelp
+  | ["h", _]        => printHelp
+  | ["-h", _]       => printHelp
+  | ["--help", _]   => printHelp
+  | ["d", fname]    => do
+    IO.println s!"Reading {fname} to find doubled keys"
+    let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
+    match parsed with
+    | Parsec.ParseResult.success pos res => 
+      let lst := listDoublons res
+      IO.println lst
+    | Parsec.ParseResult.error pos err => IO.eprintln s!"Parse error at line {pos.lineNumber}: {err}"
+  | ["l", fname]    => do
+    let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
+    match parsed with
+    | Parsec.ParseResult.success pos res => printEntries res
+    | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
+  | "q" :: (fname :: queries) => do 
+    let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
+    match parsed with
+    | Parsec.ParseResult.success pos res => printMatchingEntries res $ queries.filterMap Query.ofString
+    | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
+  | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
 

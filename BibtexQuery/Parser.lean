@@ -29,13 +29,13 @@ def name : Parsec String := do
 def classe : Parsec String := do skipChar '@'; asciiWordToLower
 
 partial def bracedContentAux (acc : String) : Parsec String :=
-(do let c ← anyChar
-    if c = '{' then
-      let s ← bracedContentAux ""
-      bracedContentAux (acc ++ s)
-    else
-      if c = '}' then return acc
-      else bracedContentAux (acc ++ c.toString))
+  (do let c ← anyChar
+      if c = '{' then
+        let s ← bracedContentAux ""
+        bracedContentAux (acc ++ s)
+      else
+        if c = '}' then return acc
+        else bracedContentAux (acc ++ c.toString))
 
 def bracedContent : Parsec String := do 
   skipChar '{'
@@ -84,7 +84,7 @@ def tag : Parsec Tag := do
 
 def outsideEntry : Parsec Unit := do let _ ← manyChars $ noneOf "@"
 
-/-- A Bibtex entry. TODO deal with "preamble" and all that crap. -/
+/-- A Bibtex entry. TODO deal with "preamble" etc. -/
 def entry : Parsec Entry := do 
   outsideEntry
   let typeOfEntry ← classe
@@ -95,7 +95,7 @@ def entry : Parsec Entry := do
   ws; skipChar '}'; ws
   return Entry.NormalType typeOfEntry nom t
 
-def BibtexFile : Parsec (List Entry) := many' entry
+def bibtexFile : Parsec (List Entry) := many' entry
 
 --#eval BibtexQuery.name "auTHOr23:z  ".mkIterator
 --#eval BibtexQuery.class "@ARTICLE ".mkIterator

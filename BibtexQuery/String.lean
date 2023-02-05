@@ -15,6 +15,7 @@ def String.Iterator.lineNumber (it : String.Iterator) : Nat :=
   let s : Substring := ⟨it.toString, 0, it.pos⟩
   s.foldl (fun n c => if c = '\n' then n+1 else n) 1
 
+/-- Strip diacritics from a string. -/
 def Char.asciify : Char → Char
 | 'á' => 'a'
 | 'à' => 'a'
@@ -127,41 +128,40 @@ def String.asciify (s : String) : String := s.map Char.asciify
 --#eval '{'.asciify.toLower
 
 def String.flattenWords (s : String) : String := s.foldl 
-(fun s c => s ++ (if c.asciify.toLower.isAlphanum then c.asciify.toLower.toString else "")) ""
+  (fun s c => s ++ (if c.asciify.toLower.isAlphanum then c.asciify.toLower.toString else "")) ""
 
 --#eval "Frédéric Dupuis, Marco {T}omamichel".flattenWords
 
 def String.splitIntoNames (s : String) : List String :=
-(s.splitOn (sep := " and ")).map trim
+  (s.splitOn (sep := " and ")).map trim
 
 def String.toLastName (s : String) : String :=
-let s' := (s.split (fun c => c = ',')).map trim
-match s' with
-| [s₁] => s₁
-| (s₁ :: _) => s₁
-| _ => ""
+  let s' := (s.split (fun c => c = ',')).map trim
+  match s' with
+  | [s₁] => s₁
+  | (s₁ :: _) => s₁
+  | _ => ""
 
 def String.toLastNames (s : String) : String :=
-String.intercalate " " $ s.splitIntoNames.map String.toLastName
+  String.intercalate " " $ s.splitIntoNames.map String.toLastName
 
 def String.flipName (s : String) : String :=
-let s' := (s.split (fun c => c = ',')).map trim
-match s' with
-| [s₁] => s₁
-| [s₁, s₂] => s₂ ++ " " ++ s₁
-| _ => ""
+  let s' := (s.split (fun c => c = ',')).map trim
+  match s' with
+  | [s₁] => s₁
+  | [s₁, s₂] => s₂ ++ " " ++ s₁
+  | _ => ""
 
 def String.toFullNames (s : String) : String :=
 String.join $ (s.splitIntoNames.map String.flipName).map String.flattenWords
 
 partial def Substring.containsSubstrStartingAt (s : Substring) (q : String) : Bool :=
-if s.toString.length = 0 then q.length = 0
-else if q.isPrefixOf s.toString then true
-else 
-  (s.drop 1).containsSubstrStartingAt q
+  if s.toString.length = 0 then q.length = 0
+  else if q.isPrefixOf s.toString then true
+  else (s.drop 1).containsSubstrStartingAt q
   
 def String.containsSubstr (s : String) (q : String) : Bool :=
-s.toSubstring.containsSubstrStartingAt q
+  s.toSubstring.containsSubstrStartingAt q
 
 def String.pad (s : String) (c : Char) (n : Nat) : String :=
-(s ++ ⟨List.replicate n c⟩).take n
+  (s ++ ⟨List.replicate n c⟩).take n
