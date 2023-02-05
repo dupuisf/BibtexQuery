@@ -26,7 +26,7 @@ def name : Parsec String := do
   return firstChar.toString ++ reste
 
 /-- "article", "book", etc -/
-def classe : Parsec String := do skipChar '@'; asciiWordToLower
+def category : Parsec String := do skipChar '@'; asciiWordToLower
 
 partial def bracedContentAux (acc : String) : Parsec String :=
   (do let c ← anyChar
@@ -64,7 +64,7 @@ def month : Parsec String := do
   | "dec" => return s
   | _     => fail "Not a valid month"
 
-/-- The content field of a tag. TODO: deal with months. -/
+/-- The content field of a tag. -/
 def tagContent : Parsec String := do 
   let c ← peek!
   if c.isDigit then manyChars digit else
@@ -80,20 +80,20 @@ def tag : Parsec Tag := do
   let tagName ← manyChars (asciiLetterToLower <|> pchar '_')
   ws; skipChar '='; ws
   let tagContent ← tagContent
-  return { Name := tagName, Content := tagContent }
+  return { name := tagName, content := tagContent }
 
 def outsideEntry : Parsec Unit := do let _ ← manyChars $ noneOf "@"
 
 /-- A Bibtex entry. TODO deal with "preamble" etc. -/
 def entry : Parsec Entry := do 
   outsideEntry
-  let typeOfEntry ← classe
+  let typeOfEntry ← category
   ws; skipChar '{'; ws
   let nom ← name
   skipChar ','; ws
   let t : List Tag ← sepBy' tag (do ws; skipChar ','; ws)
   ws; skipChar '}'; ws
-  return Entry.NormalType typeOfEntry nom t
+  return Entry.normalType typeOfEntry nom t
 
 def bibtexFile : Parsec (List Entry) := many' entry
 

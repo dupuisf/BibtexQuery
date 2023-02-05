@@ -24,9 +24,9 @@ open Lean BibtexQuery
 
 def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
   let keysOnly := parseRes.filterMap (fun entry => match entry with
-                                                   | BibtexQuery.Entry.NormalType _ name _ => some name
+                                                   | BibtexQuery.Entry.normalType _ name _ => some name
                                                    | _ => none)
-  let ⟨hash, dupl⟩ : (Std.HashMap String Unit) × List String :=
+  let ⟨_, dupl⟩ : (Std.HashMap String Unit) × List String :=
     keysOnly.foldl (init := ⟨Std.HashMap.empty, []⟩)
       (fun ⟨hsh, lst⟩ key =>
         match hsh.find? key with
@@ -74,19 +74,19 @@ def main : List String → IO Unit
     IO.println s!"Reading {fname} to find doubled keys"
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
-    | Parsec.ParseResult.success pos res => 
+    | Parsec.ParseResult.success _pos res => 
       let lst := listDoublons res
       IO.println lst
     | Parsec.ParseResult.error pos err => IO.eprintln s!"Parse error at line {pos.lineNumber}: {err}"
   | ["l", fname]    => do
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
-    | Parsec.ParseResult.success pos res => printEntries res
+    | Parsec.ParseResult.success _pos res => printEntries res
     | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
   | "q" :: (fname :: queries) => do 
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
-    | Parsec.ParseResult.success pos res => printMatchingEntries res $ queries.filterMap Query.ofString
+    | Parsec.ParseResult.success _pos res => printMatchingEntries res $ queries.filterMap Query.ofString
     | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
   | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
 

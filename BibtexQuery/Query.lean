@@ -16,22 +16,22 @@ This file deals with bibtex queries of the limited form handled by the program.
 namespace BibtexQuery
 
 inductive Query where
-| Key (s : String)
-| Author (s : String)
-| Title (s : String)
+| key (s : String)
+| author (s : String)
+| title (s : String)
 deriving Repr
 
 def Query.ofString (s : String) : Option Query :=
-  if s.startsWith "k." then some $ Query.Key $ s.drop 2
-  else if s.startsWith "a." then some $ Query.Author $ s.drop 2
-  else if s.startsWith "t." then some $ Query.Title $ s.drop 2
+  if s.startsWith "k." then some $ Query.key $ s.drop 2
+  else if s.startsWith "a." then some $ Query.author $ s.drop 2
+  else if s.startsWith "t." then some $ Query.title $ s.drop 2
   else none
 
 def Entry.matchQuery (e : Entry) (q : Query) : Bool := 
   match q with
-  | Query.Key s     => e.getKey.flattenWords.containsSubstr s
-  | Query.Author s  => e.getAuthors.toFullNames.containsSubstr s
-  | Query.Title s   => e.getTitle.flattenWords.containsSubstr s
+  | Query.key s     => e.getKey.flattenWords.containsSubstr s
+  | Query.author s  => e.getAuthors.toFullNames.containsSubstr s
+  | Query.title s   => e.getTitle.flattenWords.containsSubstr s
 
 def Entry.matchQueries (e : Entry) (lq : List Query) : Bool :=
   lq.foldl (fun acc q => acc && e.matchQuery q) true
