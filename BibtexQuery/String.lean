@@ -145,7 +145,8 @@ def String.toLastName (s : String) : String :=
 def String.toLastNames (s : String) : String :=
   String.intercalate " " $ s.splitIntoNames.map String.toLastName
 
-def String.flipName (s : String) : String :=
+/-- Standardize to "Firstname Lastname" -/
+def String.toFirstnameLastname (s : String) : String :=
   let s' := (s.split (fun c => c = ',')).map trim
   match s' with
   | [s₁] => s₁
@@ -153,7 +154,7 @@ def String.flipName (s : String) : String :=
   | _ => ""
 
 def String.toFullNames (s : String) : String :=
-String.join $ (s.splitIntoNames.map String.flipName).map String.flattenWords
+String.join $ (s.splitIntoNames.map String.toFirstnameLastname).map String.flattenWords
 
 partial def Substring.containsSubstrStartingAt (s : Substring) (q : String) : Bool :=
   if s.toString.length = 0 then q.length = 0
