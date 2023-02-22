@@ -42,7 +42,7 @@ namespace Entry
 
 /-- Returns the authors of a bibtex entry, or an empty string if it is not specified. -/
 def getAuthors : (e : Entry) → String
-  | normalType _cl _name tags =>
+  | .normalType _cl _name tags =>
     match tags.find? (fun t => t.name = "author") with
     | some t => t.content
     | none   => ""
@@ -50,7 +50,7 @@ def getAuthors : (e : Entry) → String
 
 /-- Returns the title of a bibtex entry, or an empty string if it is not specified. -/
 def getTitle : (e : Entry) → String
-  | normalType _cl _name tags =>
+  | .normalType _cl _name tags =>
     match tags.find? (fun t => t.name = "title") with
     | some t => t.content
     | none   => ""
@@ -66,7 +66,7 @@ def getKeywords : (e : Entry) → String
 
 /-- Returns the key of a bibtex entry. -/
 def getKey : Entry → String
-  | normalType _cl name _tags => name
+  | .normalType _cl name _tags => name
   | _ => "No key"
 
 /-- Returns an abridged representation of a bibtex entry. -/
@@ -75,7 +75,7 @@ def toAbridgedRepr (e : Entry) : String :=
 
 /-- Returns a string containing a standardized representation of a bibtex entry. -/
 def toString : Entry → String
-  | normalType cl name tags => Id.run do
+  | .normalType cl name tags => Id.run do
       let mut output := (s!"@{cl}" ++ "{" ++ s!"{name},").push '\n'
       for t in tags do
         output := output ++ "  " ++ t.toString ++ s!"\n"

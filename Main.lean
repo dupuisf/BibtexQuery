@@ -53,6 +53,7 @@ Types of queries:
   k: key (ex: k.d14)
   a: author (ex: a.dupuis)
   t: title (ex: t.channelcapacity)
+  w: keywords (ex: w.quantum)
 "
 
 def printEntries (ents : List Entry) : IO Unit :=
