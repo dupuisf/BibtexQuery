@@ -44,8 +44,6 @@ partial def sepByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
 def sepBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
   do Parsec.sepByCore pcont psep [←pcont]
 
-partial def fuckme (p : Parsec α) : Parsec α := attempt p <|> fail "fukcme"
-
 partial def sepByCore' (pcont : Parsec α) (psep : Parsec β) (acc : List α) : 
     Parsec (List α) := 
   attempt (do let _ ← psep; sepByCore' pcont psep (acc ++ [←pcont]))
@@ -62,7 +60,16 @@ partial def endByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
 def endBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
   (do Parsec.endByCore pcont psep [])
 
+@[inline]
+def alphaNum : Parsec Char := attempt do
+  let c ← anyChar
+  if ('A' ≤ c ∧ c ≤ 'Z') ∨ ('a' ≤ c ∧ c ≤ 'z') ∨ ('0' ≤ c ∧ c ≤ '9') then 
+    return c 
+  else fail s!"ASCII letter expected"
+
 def asciiLetterToLower : Parsec Char := do return (←asciiLetter).toLower
+
+def alphaNumToLower : Parsec Char := do return (←alphaNum).toLower
 
 def asciiWordToLower : Parsec String := manyChars asciiLetterToLower
 

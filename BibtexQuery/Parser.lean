@@ -22,7 +22,7 @@ namespace BibtexQuery.Parser
 /-- The name of the bibtex entry (i.e. what goes in the cite command). -/
 def name : Parsec String := do
   let firstChar ← Parsec.asciiLetter
-  let reste ← manyChars $ (asciiLetter <|> digit <|> pchar ':' <|> pchar '-')
+  let reste ← manyChars $ (alphaNum <|> pchar ':' <|> pchar '-' <|> pchar '_')
   return firstChar.toString ++ reste
 
 /-- "article", "book", etc -/
@@ -77,7 +77,7 @@ def tagContent : Parsec String := do
 /-- i.e. journal = {Journal of Musical Deontology} -/
 def tag : Parsec Tag := do 
   --let tagName ← asciiWordToLower
-  let tagName ← manyChars (asciiLetterToLower <|> pchar '_')
+  let tagName ← manyChars (alphaNumToLower <|> pchar '_' <|> pchar '-')
   ws; skipChar '='; ws
   let tagContent ← tagContent
   return { name := tagName, content := tagContent }
