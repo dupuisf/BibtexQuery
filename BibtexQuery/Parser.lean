@@ -76,7 +76,6 @@ def tagContent : Parsec String := do
 
 /-- i.e. journal = {Journal of Musical Deontology} -/
 def tag : Parsec Tag := do 
-  --let tagName ← asciiWordToLower
   let tagName ← manyChars (alphaNumToLower <|> pchar '_' <|> pchar '-')
   ws; skipChar '='; ws
   let tagContent ← tagContent
@@ -97,13 +96,14 @@ def entry : Parsec Entry := do
 
 def bibtexFile : Parsec (List Entry) := many' entry
 
---#eval BibtexQuery.name "auTHOr23:z  ".mkIterator
---#eval BibtexQuery.class "@ARTICLE ".mkIterator
---#eval BibtexQuery.tag "auTHOr =   \n{Dès Noël où un zéphyr haï\n me vêt de glaçons würmiens, je dîne d'exquis rôtis de bœuf au kir à l'aÿ d'âge mûr}".mkIterator
---#eval BibtexQuery.tag "auTHOr = \"Test\"".mkIterator
---#eval BibtexQuery.tag "journal = {Journal of Musical\n Deontology}".mkIterator
---#eval BibtexQuery.tag "year = 2022".mkIterator
---#eval BibtexQuery.entry "  @article{bla23,\n year = 2022,\n author = {Frédéric Dupuis}\n}\n".mkIterator
+--#eval BibtexQuery.Parser.name "auTHOr23:z  ".mkIterator
+--#eval BibtexQuery.Parser.category "@ARTICLE ".mkIterator
+--#eval BibtexQuery.Parser.tag "auTHOr =   \n{Dès Noël où un zéphyr haï\n me vêt de glaçons würmiens, je dîne d'exquis rôtis de bœuf au kir à l'aÿ d'âge mûr}".mkIterator
+--#eval BibtexQuery.Parser.tag "auTHOr = \"Test\"".mkIterator
+--#eval BibtexQuery.Parser.tag "journal = {Journal of Musical\n Deontology}".mkIterator
+--#eval BibtexQuery.Parser.tag "year = 2022".mkIterator
+--#eval BibtexQuery.Parser.tag "Bdsk-Url-1 = {https://doi.org/10.1007/s00220-020-03839-5}".mkIterator
+--#eval BibtexQuery.Parser.entry "  @article{bla23,\n year = 2022,\n author = {Frédéric Dupuis}\n}\n".mkIterator
 --#eval (Parsec.sepBy (manyChars $ Parsec.noneOf ",") (skipChar ',')) "bla, foo,".mkIterator
 
 --#eval (sepBy' asciiWordToLower (do ws; skipChar ','; ws)) "bla, foo, baz, ".mkIterator
