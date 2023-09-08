@@ -45,6 +45,7 @@ Commands:
   d: check for duplicate entries
   l: list all entries in abridged form
   q: print entries that match the given query
+  c: print citations of entries that match the given query
 
 Queries have the form «t.query» (without the quotes) with t being the type of query,
 and «query» being the content. The entries printed out are those that match all the queries.
@@ -63,6 +64,10 @@ def printEntries (ents : List Entry) : IO Unit :=
 def printMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit := do
   for e in ents do
     if e.matchQueries qs then IO.println e.toAbridgedRepr 
+
+def printMatchingCitations (ents : List Entry) (qs : List Query) : IO Unit := do
+  for e in ents do
+    if e.matchQueries qs then IO.println e.toCitation
 
 def main : List String → IO Unit
   | ["h"]           => printHelp
@@ -88,6 +93,11 @@ def main : List String → IO Unit
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
     | Parsec.ParseResult.success _pos res => printMatchingEntries res $ queries.filterMap Query.ofString
+    | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
+  | "c" :: (fname :: queries) => do 
+    let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
+    match parsed with
+    | Parsec.ParseResult.success _pos res => printMatchingCitations res $ queries.filterMap Query.ofString
     | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
   | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
 
