@@ -13,4 +13,4 @@ will ever be supported in the future; I only wrote this to learn how to do "norm
 ## Installation instructions
 
 Make sure you have a working Lean 4 installation (see [here](https://leanprover.github.io/lean4/doc/quickstart.html) for how to do that), and then type `lake build` in the main directory. The
-executable should appear in ``build/bin``.
+executable should appear in ``.lake/build/bin``.
