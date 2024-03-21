@@ -64,6 +64,11 @@ def getKeywords : (e : Entry) → String
     | none   => ""
   | _ => ""
 
+/-- Returns the class of a bibtex entry (ie book, article, etc). -/
+def getClass : (e : Entry) → String
+  | .normalType cl _name _tags => cl
+  | _ => ""
+
 /-- Returns the key of a bibtex entry. -/
 def getKey : Entry → String
   | .normalType _cl name _tags => name
@@ -71,7 +76,7 @@ def getKey : Entry → String
 
 /-- Returns the arxiv number of a bibtex entry. -/
 def getArxivNumber : Entry → String
-  | .normalType _cl _name tags => 
+  | .normalType _cl _name tags =>
     match tags.find? (fun t => t.name = "eprint") with
     | some t => t.content
     | none   => ""
@@ -79,20 +84,20 @@ def getArxivNumber : Entry → String
 
 /-- Returns the arxiv link of a bibtex entry. -/
 def getArxivLink : Entry → String
-  | .normalType _cl _name tags => 
+  | .normalType _cl _name tags =>
     match tags.find? (fun t => t.name = "eprint") with
     | some t => "http://arxiv.org/abs/" ++ t.content
     | none   => ""
   | _ => "No arxiv number"
 
 /-- Returns an abridged representation of a bibtex entry. -/
-def toAbridgedRepr (e : Entry) : String := 
+def toAbridgedRepr (e : Entry) : String :=
   e.getKey.pad ' ' 25 ++ " | " ++ e.getAuthors.toLastNames.pad ' ' 50 ++ " | " ++ e.getTitle
 
 /-- Returns a «clean citation» of a bibtex entry. -/
 def toCitation (e : Entry) : String :=
   e.getAuthors ++ ", «" ++ e.getTitle ++ "», " ++ e.getArxivLink
-  
+
 
 /-- Returns a string containing a standardized representation of a bibtex entry. -/
 def toString : Entry → String
@@ -103,10 +108,10 @@ def toString : Entry → String
       return (output ++ "}")
   | _ => ""
 
---#eval IO.print <| Entry.toString $ .normalType "book" "d12" [Tag.mk "author" "Dupuis, Frédéric", 
+--#eval IO.print <| Entry.toString $ .normalType "book" "d12" [Tag.mk "author" "Dupuis, Frédéric",
 --                                                 Tag.mk "title" "Bonsoir la visite"]
 
---#eval IO.print <| Entry.toCitation $ .normalType "book" "d12" [Tag.mk "author" "Dupuis, Frédéric", 
+--#eval IO.print <| Entry.toCitation $ .normalType "book" "d12" [Tag.mk "author" "Dupuis, Frédéric",
 --                                                 Tag.mk "title" "Bonsoir la visite", Tag.mk "eprint" "2308.11736"]
 
 end Entry

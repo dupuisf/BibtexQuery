@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+shopt -s nullglob globstar
+
+papers=( ~/git/w/bib/*.pdf ~/git/w/bib/*.djvu )
+
+bibfile=$(printf '%s\n' "${papers[@]}" | rofi -i -dmenu "$@")
+
+[[ -n $bibfile ]] || exit
+
+zathura $bibfile &

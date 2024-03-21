@@ -20,6 +20,7 @@ inductive Query where
 | author (s : String)
 | title (s : String)
 | word (s : String)
+| class (s : String)
 deriving Repr
 
 def Query.ofString (s : String) : Option Query :=
@@ -27,14 +28,16 @@ def Query.ofString (s : String) : Option Query :=
   else if s.startsWith "a." then some $ .author $ s.drop 2
   else if s.startsWith "t." then some $ .title $ s.drop 2
   else if s.startsWith "w." then some $ .word $ s.drop 2
+  else if s.startsWith "c." then some $ .class $ s.drop 2
   else none
 
-def Entry.matchQuery (e : Entry) (q : Query) : Bool := 
+def Entry.matchQuery (e : Entry) (q : Query) : Bool :=
   match q with
   | .key s     => e.getKey.flattenWords.containsSubstr s
   | .author s  => e.getAuthors.toFullNames.containsSubstr s
   | .title s   => e.getTitle.flattenWords.containsSubstr s
   | .word s   => e.getKeywords.flattenWords.containsSubstr s
+  | .class s => e.getClass.flattenWords.containsSubstr s
 
 def Entry.matchQueries (e : Entry) (lq : List Query) : Bool :=
   lq.foldl (fun acc q => acc && e.matchQuery q) true

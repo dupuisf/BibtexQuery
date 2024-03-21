@@ -34,7 +34,7 @@ def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
         | some _ => ⟨hsh, (key :: lst)⟩)
   dupl
 
-def printHelp := IO.println 
+def printHelp := IO.println
 "
 bibtex-query - command-line bibtex file processor
 
@@ -52,6 +52,7 @@ and «query» being the content. The entries printed out are those that match al
 
 Types of queries:
   k: key (ex: k.d14)
+  c: class (ex: article, book)
   a: author (ex: a.dupuis)
   t: title (ex: t.channelcapacity)
   w: keywords (ex: w.quantum)
@@ -63,7 +64,7 @@ def printEntries (ents : List Entry) : IO Unit :=
 
 def printMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit := do
   for e in ents do
-    if e.matchQueries qs then IO.println e.toAbridgedRepr 
+    if e.matchQueries qs then IO.println e.toAbridgedRepr
 
 def printMatchingCitations (ents : List Entry) (qs : List Query) : IO Unit := do
   for e in ents do
@@ -80,7 +81,7 @@ def main : List String → IO Unit
     IO.println s!"Reading {fname} to find doubled keys"
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
-    | Parsec.ParseResult.success _pos res => 
+    | Parsec.ParseResult.success _pos res =>
       let lst := listDoublons res
       IO.println lst
     | Parsec.ParseResult.error pos err => IO.eprintln s!"Parse error at line {pos.lineNumber}: {err}"
@@ -89,15 +90,14 @@ def main : List String → IO Unit
     match parsed with
     | Parsec.ParseResult.success _pos res => printEntries res
     | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
-  | "q" :: (fname :: queries) => do 
+  | "q" :: (fname :: queries) => do
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
     | Parsec.ParseResult.success _pos res => printMatchingEntries res $ queries.filterMap Query.ofString
     | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
-  | "c" :: (fname :: queries) => do 
+  | "c" :: (fname :: queries) => do
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
     | Parsec.ParseResult.success _pos res => printMatchingCitations res $ queries.filterMap Query.ofString
     | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
   | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
-
