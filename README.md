@@ -1,7 +1,7 @@
 # BibtexQuery: a simple command-line bibtex query utility
 
 BibtexQuery is a command-line utility that reads in a bibtex file and performs simple queries. A query is a string
-of the form ``q.querystring``, where ``q`` is either ``a`` for author, ``t`` for title, ``k`` for key, or ``w`` for keywords, and ``querystring``
+of the form ``q.querystring``, where ``q`` is either ``a`` for author, ``t`` for title, ``k`` for key, ``c`` for class (i.e. book, article, etc), or ``w`` for keywords, and ``querystring``
 is a string (without spaces). BibtexQuery reads in a bibtex file, and returns the entries that match all the
 queries given as command-line parameters. Note that the entries are processed in such a way that strips diacritics,
 spaces and special characters before the queries are performed. In addition, the list of authors is normalized to
