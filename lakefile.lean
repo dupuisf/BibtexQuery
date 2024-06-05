@@ -12,4 +12,4 @@ lean_exe «bibtex-query» {
     root := `Main
 }
 
-require std from git "https://github.com/leanprover-community/batteries" @ "stable"
+require batteries from git "https://github.com/leanprover-community/batteries" @ "stable"

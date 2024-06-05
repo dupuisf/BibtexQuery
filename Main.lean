@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Frédéric Dupuis
 -/
 
-import Std.Data.HashMap.Basic
+import Batteries.Data.HashMap.Basic
 import BibtexQuery.Parser
 import BibtexQuery.String
 import BibtexQuery.Query
@@ -26,8 +26,8 @@ def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
   let keysOnly := parseRes.filterMap (fun entry => match entry with
                                                    | BibtexQuery.Entry.normalType _ name _ => some name
                                                    | _ => none)
-  let ⟨_, dupl⟩ : (Std.HashMap String Unit) × List String :=
-    keysOnly.foldl (init := ⟨Std.HashMap.empty, []⟩)
+  let ⟨_, dupl⟩ : (Batteries.HashMap String Unit) × List String :=
+    keysOnly.foldl (init := ⟨Batteries.HashMap.empty, []⟩)
       (fun ⟨hsh, lst⟩ key =>
         match hsh.find? key with
         | none => ⟨hsh.insert key (), lst⟩
