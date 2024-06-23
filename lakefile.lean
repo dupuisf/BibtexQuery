@@ -7,6 +7,5 @@ package BibtexQuery
 lean_lib BibtexQuery
 
 @[default_target]
-lean_exe «bibtex-query» {
-    root := `Main
-}
+lean_exe «bibtex-query» where
+    root := `BibtexQuery.Main
