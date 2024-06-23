@@ -24,7 +24,7 @@ def noneOfStr (bad : String) : Parsec String := manyChars (noneOf bad)
 
 --def Lean.Parsec.line : Parsec String := Parsec.manyChars $ Parsec.noneOf '\n'
 
-def eol : Parsec String := 
+def eol : Parsec String :=
   Parsec.pstring "\n\r" <|> Parsec.pstring "\r\n" <|> Parsec.pstring "\n"
 
 partial def manyCore' (p : Parsec α) (acc : List α) : Parsec (List α) :=
@@ -32,21 +32,21 @@ partial def manyCore' (p : Parsec α) (acc : List α) : Parsec (List α) :=
 
 def many' (p : Parsec α) : Parsec (List α) := Parsec.manyCore' p []
 
-partial def manyStrCore (p : Parsec String) (acc : String) : Parsec String := 
+partial def manyStrCore (p : Parsec String) (acc : String) : Parsec String :=
   (do manyStrCore p (acc ++ (←p))) <|> pure acc
 
 def manyStr (p : Parsec String) : Parsec String := manyStrCore p ""
 
-partial def sepByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) : 
+partial def sepByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
     Parsec (List α) :=
   (do let _ ← psep; sepByCore pcont psep (acc ++ [←pcont])) <|> pure acc
 
 def sepBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
   do Parsec.sepByCore pcont psep [←pcont]
 
-partial def sepByCore' (pcont : Parsec α) (psep : Parsec β) (acc : List α) : 
-    Parsec (List α) := 
-  attempt (do let _ ← psep; sepByCore' pcont psep (acc ++ [←pcont]))
+partial def sepByCore' (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
+    Parsec (List α) :=
+  attempt (do let _ ← psep; sepByCore' pcont psep (acc ++ [← pcont]))
   <|> (do  let _ ← attempt psep; return acc)
   <|> pure acc
 
@@ -63,8 +63,8 @@ def endBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
 @[inline]
 def alphaNum : Parsec Char := attempt do
   let c ← anyChar
-  if ('A' ≤ c ∧ c ≤ 'Z') ∨ ('a' ≤ c ∧ c ≤ 'z') ∨ ('0' ≤ c ∧ c ≤ '9') then 
-    return c 
+  if ('A' ≤ c ∧ c ≤ 'Z') ∨ ('a' ≤ c ∧ c ≤ 'z') ∨ ('0' ≤ c ∧ c ≤ '9') then
+    return c
   else fail s!"ASCII letter expected"
 
 def asciiLetterToLower : Parsec Char := do return (←asciiLetter).toLower
@@ -73,7 +73,7 @@ def alphaNumToLower : Parsec Char := do return (←alphaNum).toLower
 
 def asciiWordToLower : Parsec String := manyChars asciiLetterToLower
 
-def between (op : Parsec α) (cl : Parsec α) (mid : Parsec β) : Parsec β := do 
+def between (op : Parsec α) (cl : Parsec α) (mid : Parsec β) : Parsec β := do
   let _ ← op
   let s ← mid
   let _ ← cl
