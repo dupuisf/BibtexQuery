@@ -15,7 +15,7 @@ Bibtex format is supported; features such as predefined strings and concatenatio
 supported.
 -/
 
-open Lean Parsec
+open Lean Parsec BibtexQuery.ParsecExtra
 
 namespace BibtexQuery.Parser
 
@@ -43,9 +43,9 @@ def bracedContent : Parsec String := attempt do
   let s ← bracedContentTail ""
   return s.dropRight 1
 
-def quotedContent : Parsec String := do
+def quotedContent : Parsec String := attempt do
   skipChar '"'
-  let s ← manyChars <| noneOf "\""
+  let s ← manyCharsUntilWithPrev fun | (some '\\'), '"' => false | _, '"' => true | _, _ => false
   skipChar '"'
   return (s.replace "\n" "").replace "\r" ""
 
@@ -67,7 +67,7 @@ def month : Parsec String := attempt do
   | _     => fail "Not a valid month"
 
 /-- The content field of a tag. -/
-def tagContent : Parsec String := do
+def tagContent : Parsec String := attempt do
   let c ← peek!
   if c.isDigit then manyChars digit else
     if c.isAlpha then month else
@@ -77,7 +77,7 @@ def tagContent : Parsec String := do
       | _   => fail "Tag content expected"
 
 /-- i.e. journal = {Journal of Musical Deontology} -/
-def tag : Parsec Tag := do
+def tag : Parsec Tag := attempt do
   let tagName ← manyChars (alphaNumToLower <|> pchar '_' <|> pchar '-')
   ws; skipChar '='; ws
   let tagContent ← tagContent
@@ -110,8 +110,7 @@ def bibtexFile : Parsec (List Entry) := many' entry
 --#eval "Bdsk-Url-1 = {https://doi.org/10.1007/s00220-020-03839-5}".parseDebug tag
 --#eval "year = 2022,\n author = {Frédéric Dupuis},".parseDebug (sepOrEndBy tag (do ws; skipChar ','; ws))
 --#eval "@article{bla23,\n year = 2022,\n author = {Frédéric Dupuis}\n}\n".parseDebug entry
+--#eval "\"Bachem, Achim and Korte, Bernhard and Gr{\\\"o}tschel\"".parseDebug quotedContent
 --#eval "@article{bla23,\n year = 2022,\n author = \"Bachem, Achim and Korte, Bernhard and Gr{\"o}tschel\"\n}\n".parseDebug entry
 
 end BibtexQuery.Parser
-
-open Lean

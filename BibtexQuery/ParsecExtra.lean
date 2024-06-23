@@ -14,9 +14,9 @@ of which is modelled after its Haskell counterpart.
 -/
 
 
-open Lean
+open Lean Lean.Parsec
 
-namespace Lean.Parsec
+namespace BibtexQuery.ParsecExtra
 
 def _root_.String.parse? [Inhabited α] (s : String) (p : Lean.Parsec α) : Option α :=
   match p s.iter with
@@ -39,14 +39,14 @@ def eol : Parsec String :=
   Parsec.pstring "\n\r" <|> Parsec.pstring "\r\n" <|> Parsec.pstring "\n"
 
 @[inline]
-def maybeSkip (p : Parsec α) : Parsec Unit := (attempt do let _ ← p; return ()) <|> pure ()
+def maybeSkip (p : Parsec α) : Parsec Unit := (attempt (p *> pure ())) <|> pure ()
 
 @[inline]
 partial def manyCore' (p : Parsec α) (acc : List α) : Parsec (List α) :=
   (do manyCore' p (acc ++ [← p])) <|> pure acc
 
 @[inline]
-def many' (p : Parsec α) : Parsec (List α) := Parsec.manyCore' p []
+def many' (p : Parsec α) : Parsec (List α) := manyCore' p []
 
 @[inline]
 partial def manyStrCore (p : Parsec String) (acc : String) : Parsec String :=
@@ -67,15 +67,6 @@ def sepBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
 @[inline]
 def sepOrEndBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
   (do let output ← sepByCore pcont psep [← pcont]; maybeSkip psep; return output) <|> pure []
-
---partial def sepByCore' (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
---    Parsec (List α) :=
---  attempt (do let _ ← psep; sepByCore' pcont psep (acc ++ [← pcont]))
---  <|> (do  let _ ← attempt psep; return acc)
---  <|> pure acc
---
---def sepBy' (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
---  do Parsec.sepByCore' pcont psep [←pcont]
 
 @[inline]
 partial def endByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
@@ -114,4 +105,11 @@ def natNum : Parsec Nat := attempt do
   let some n := (← manyChars digit).toNat? | fail "Not a natural number"
   return n
 
-end Lean.Parsec
+def manyCharsUntilWithPrev (test : Option Char → Char → Bool) : Parsec String := fun it =>
+  let out :=
+    it.foldUntil "" fun acc c =>
+      let prev : Option Char := if acc == "" then none else acc.back
+      if test prev c then none else some (acc ++ c.toString)
+  .success out.2 out.1
+
+end BibtexQuery.ParsecExtra
