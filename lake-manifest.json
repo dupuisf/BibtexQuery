@@ -1,5 +1,5 @@
-{"version": 7,
+{"version": "1.0.0",
  "packagesDir": ".lake/packages",
  "packages": [],
- "name": "«bibtex-query»",
+ "name": "BibtexQuery",
  "lakeDir": ".lake"}
