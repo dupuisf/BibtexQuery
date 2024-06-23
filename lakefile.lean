@@ -1,11 +1,10 @@
 import Lake
 open Lake DSL
 
-package «bibtex-query» {
-  -- add configuration options here
-}
+package BibtexQuery
 
-lean_lib «BibtexQuery»
+@[default_target]
+lean_lib BibtexQuery
 
 @[default_target]
 lean_exe «bibtex-query» {

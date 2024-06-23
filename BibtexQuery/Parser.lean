@@ -20,34 +20,36 @@ open Lean Parsec
 namespace BibtexQuery.Parser
 
 /-- The name of the bibtex entry (i.e. what goes in the cite command). -/
-def name : Parsec String := do
+def name : Parsec String := attempt do
   let firstChar ← Parsec.asciiLetter
-  let reste ← manyChars $ (alphaNum <|> pchar ':' <|> pchar '-' <|> pchar '_')
-  return firstChar.toString ++ reste
+  let remainder ← manyChars <| (alphaNum <|> pchar ':' <|> pchar '-' <|> pchar '_')
+  return firstChar.toString ++ remainder
 
 /-- "article", "book", etc -/
-def category : Parsec String := do skipChar '@'; asciiWordToLower
+def category : Parsec String := attempt do skipChar '@'; asciiWordToLower
 
-partial def bracedContentAux (acc : String) : Parsec String :=
-  (do let c ← anyChar
-      if c = '{' then
-        let s ← bracedContentAux ""
-        bracedContentAux (acc ++ s)
-      else
-        if c = '}' then return acc
-        else bracedContentAux (acc ++ c.toString))
+partial def bracedContentTail (acc : String) : Parsec String := attempt do
+  let c ← anyChar
+  if c = '{' then
+    let s ← bracedContentTail ""
+    bracedContentTail (acc ++ "{" ++ s)
+  else
+    if c = '}' then return acc ++ "}"
+    else
+      bracedContentTail (acc ++ c.toString)
 
-def bracedContent : Parsec String := do 
+def bracedContent : Parsec String := attempt do
   skipChar '{'
-  return ((←bracedContentAux "").replace "\n" "").replace "\r" ""
+  let s ← bracedContentTail ""
+  return s.dropRight 1
 
-def quotedContent : Parsec String := do 
+def quotedContent : Parsec String := do
   skipChar '"'
-  let s ← manyChars $ noneOf "\""
+  let s ← manyChars <| noneOf "\""
   skipChar '"'
   return (s.replace "\n" "").replace "\r" ""
 
-def month : Parsec String := do 
+def month : Parsec String := attempt do
   let s ← asciiWordToLower
   match s with
   | "jan" => return s
@@ -65,7 +67,7 @@ def month : Parsec String := do
   | _     => fail "Not a valid month"
 
 /-- The content field of a tag. -/
-def tagContent : Parsec String := do 
+def tagContent : Parsec String := do
   let c ← peek!
   if c.isDigit then manyChars digit else
     if c.isAlpha then month else
@@ -75,39 +77,40 @@ def tagContent : Parsec String := do
       | _   => fail "Tag content expected"
 
 /-- i.e. journal = {Journal of Musical Deontology} -/
-def tag : Parsec Tag := do 
+def tag : Parsec Tag := do
   let tagName ← manyChars (alphaNumToLower <|> pchar '_' <|> pchar '-')
   ws; skipChar '='; ws
   let tagContent ← tagContent
   return { name := tagName, content := tagContent }
 
-def outsideEntry : Parsec Unit := do let _ ← manyChars $ noneOf "@"
+def outsideEntry : Parsec Unit := attempt do
+  let _ ← manyChars <| noneOf "@"
 
 /-- A Bibtex entry. TODO deal with "preamble" etc. -/
-def entry : Parsec Entry := do 
+def entry : Parsec Entry := attempt do
   outsideEntry
   let typeOfEntry ← category
   ws; skipChar '{'; ws
   let nom ← name
   skipChar ','; ws
-  let t : List Tag ← sepBy' tag (do ws; skipChar ','; ws)
+  let t : List Tag ← sepOrEndBy tag (do ws; skipChar ','; ws)
   ws; skipChar '}'; ws
   return Entry.normalType typeOfEntry nom t
 
 def bibtexFile : Parsec (List Entry) := many' entry
 
---#eval BibtexQuery.Parser.name "auTHOr23:z  ".mkIterator
---#eval BibtexQuery.Parser.category "@ARTICLE ".mkIterator
---#eval BibtexQuery.Parser.tag "auTHOr =   \n{Dès Noël où un zéphyr haï\n me vêt de glaçons würmiens, je dîne d'exquis rôtis de bœuf au kir à l'aÿ d'âge mûr}".mkIterator
---#eval BibtexQuery.Parser.tag "auTHOr = \"Test\"".mkIterator
---#eval BibtexQuery.Parser.tag "journal = {Journal of Musical\n Deontology}".mkIterator
---#eval BibtexQuery.Parser.tag "year = 2022".mkIterator
---#eval BibtexQuery.Parser.tag "Bdsk-Url-1 = {https://doi.org/10.1007/s00220-020-03839-5}".mkIterator
---#eval BibtexQuery.Parser.entry "  @article{bla23,\n year = 2022,\n author = {Frédéric Dupuis}\n}\n".mkIterator
---#eval (Parsec.sepBy (manyChars $ Parsec.noneOf ",") (skipChar ',')) "bla, foo,".mkIterator
-
---#eval (sepBy' asciiWordToLower (do ws; skipChar ','; ws)) "bla, foo, baz, ".mkIterator
-
+--#eval "auTHOr23:z  ".parseDebug name
+--#eval "auTHOr23:z".parseDebug name
+--#eval "@ARTICLE ".parseDebug category
+--#eval "@ARtiCLE".parseDebug category
+--#eval "auTHOr =   \n{Dès Noël où un zéphyr haï\n me vêt de glaçons würmiens, je dîne d'exquis rôtis de bœuf au kir à l'aÿ d'âge mûr}".parseDebug tag
+--#eval "auTHOr = \"Test\"".parseDebug tag
+--#eval "journal = {Journal of Musical\n Deontology}".parseDebug tag
+--#eval "year = 2022".parseDebug tag
+--#eval "Bdsk-Url-1 = {https://doi.org/10.1007/s00220-020-03839-5}".parseDebug tag
+--#eval "year = 2022,\n author = {Frédéric Dupuis},".parseDebug (sepOrEndBy tag (do ws; skipChar ','; ws))
+--#eval "@article{bla23,\n year = 2022,\n author = {Frédéric Dupuis}\n}\n".parseDebug entry
+--#eval "@article{bla23,\n year = 2022,\n author = \"Bachem, Achim and Korte, Bernhard and Gr{\"o}tschel\"\n}\n".parseDebug entry
 
 end BibtexQuery.Parser
 
