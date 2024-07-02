@@ -10,7 +10,7 @@ import Lean.Data.Parsec
 
 # TeX diacritics
 
-This file contains functions for TeX diacritics process.
+This file contains functions for TeX diacritics processing.
 The main function is `texDiacritics`, which
 will convert all TeX commands for diacritics into UTF-8 characters,
 and error on any other TeX commands which are not in math environment.
@@ -25,7 +25,7 @@ namespace BibtexQuery.TexDiacritics
 def ws' : Parsec String :=  manyChars <| satisfy fun c =>
   c == ' ' || c == '\n' || c == '\r' || c == '\t'
 
-/-- Match a normal characters which is not the beginning of TeX command. -/
+/-- Match a normal character which is not the beginning of TeX command. -/
 def normalChar : Parsec Char := satisfy fun c =>
   c != '\\' && c != '$' && c != '{' && c != '}'
 
