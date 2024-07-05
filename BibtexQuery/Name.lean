@@ -111,7 +111,8 @@ def stripDiacritics (c : Char) : Char :=
   | 'å' => 'a' | 'Å' => 'A'
   | 'ø' => 'o' | 'Ø' => 'O'
   | 'ł' => 'l' | 'Ł' => 'L'
-  | 'ı' => 'i' | 'ȷ' => 'J'
+  | 'ı' => 'i'
+  | 'ȷ' => 'j'
   | '\u00DF' => 's' | '\u1E9E' => 'S'
   | _ =>
     let s := getCanonicalDecomposition c
