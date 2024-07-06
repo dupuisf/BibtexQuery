@@ -192,11 +192,13 @@ structure BibtexName where
   /-- The last name without TeX commands, braces and diacritics,
   all letters converted to uppercase. -/
   lastNameWithoutDiacritics : String
-  /-- The one-letter abbreviation of the last name. Note that this is not necessarily of
-  one-letter; it is if the last name contains no spaces and with only one uppercase letter. -/
+  /-- The one-letter abbreviation of the last name, which is used if a bibitem has at least
+  two authors. Note that this is not necessarily of one-letter;
+  it is if the last name contains no spaces and with only one uppercase letter. -/
   oneLetterAbbr : String
-  /-- The three-letter abbreviation of the last name. Note that this is not necessarily of
-  three-letter; it is if the last name contains no spaces and with only one uppercase letter. -/
+  /-- The three-letter abbreviation of the last name, which is used if a bibitem has exactly
+  one author. Note that this is not necessarily of three-letter;
+  it is if the last name contains no spaces and with only one uppercase letter. -/
   threeLetterAbbr : String
   deriving Repr
 
