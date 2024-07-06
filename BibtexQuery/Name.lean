@@ -61,13 +61,15 @@ def getNameAux : Parsec (Array String) := do
 
 /-- Input a name string already split by spaces and comma,
 return `(Firstname, Lastname)`.
-The braces in the name are preserevd. Supported formats:
+The braces in the name are preserevd. The logic is:
 
-- `Lastname, Firstname => (Firstname, Lastname)`
-- `Firstname {Last {N}ame} => (Firstname, Last {N}ame)`
-- `Firstname Lastname => (Firstname, Lastname)`
-- `First Name Lastname => (First Name, Lastname)`
-- `Firstname last Name => (Firstname, last Name)`
+1. If there is "," in the array, then the items before the first "," are the last name,
+   and the items after the first "," are the first name.
+2. Otherwise, if the last item begins with "{" and ends with "}", then it is the last name
+   (after removing the outmost braces), the remaining items are the first name.
+3. Otherwise, if there is an item begins with a lowercase letter, then the items before the first of
+   such item are the first name, the remaining items are the last name.
+4. Otherwise, the last item is the last name, the remaining items are the first name.
 -/
 def getName (arr : Array String) : String × String :=
   if arr.isEmpty then
@@ -84,10 +86,11 @@ def getName (arr : Array String) : String × String :=
         (arr.toSubarray.take (arr.size - 1) |> join',
           s.toSubstring.drop 1 |>.dropRight 1 |>.toString)
       else
-        let lastName := arr.reverse.toSubarray.drop 1 |>.toArray.takeWhile
-          (fun s => isLowercase s.front) |>.reverse.push s
-        (arr.toSubarray.take (arr.size - lastName.size) |> join',
-          lastName.toSubarray |> join')
+        match arr.findIdx? fun s => isLowercase s.front with
+        | .some i =>
+          (arr.toSubarray.take i |> join', arr.toSubarray.drop i |> join')
+        | .none =>
+          (arr.toSubarray.take (arr.size - 1) |> join', s)
 
 /-- Input a bibtex name string without TeX commands
 and math equations, return an array of `(Firstname, Lastname)`.
