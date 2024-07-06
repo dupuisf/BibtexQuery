@@ -126,6 +126,10 @@ def stripDiacriticsFromString (s : String) : String :=
   s.toList.toArray.map stripDiacritics |>.filter (not <| GeneralCategory.isMark ·)
     |>.toList |> String.mk
 
+/-- Get the array of alphabets of a string after stripping diacritics. -/
+def getAlphabets (s : String) : Array Char :=
+  s.toList.toArray.map stripDiacritics |>.filter isAlphabetic
+
 /-- Check if a string is an upper case Roman numerals.
 It does not check the validity of the number, for example, it accepts `IXIX`. -/
 def isUppercaseRomanNumerals (s : String) : Bool :=
@@ -136,27 +140,44 @@ def isUppercaseRomanNumerals (s : String) : Bool :=
 
 /-- Input a last name string without TeX commands, braces
 and math equations, already split by spaces and comma,
-return `(oneLetterAbbr, threeLetterAbbr)` of the last name. -/
+return `(oneLetterAbbr, threeLetterAbbr)` of the last name.
+Note that they are not necessarily of one-letter and
+three-letter; they are if the last name contains no spaces and with only one uppercase letter.
+The logic is:
+
+First, if there are more than one items, remove all items which are upper case Roman numerals.
+For example, this removes "III" in "Gerth III".
+
+1. If the number of items is not exactly one, then both of the abbreviations are the concatenation
+   of the first alphabets of each item.
+2. Otherwise, if there are exactly two uppercase alphabets and there is exactly one alphabet
+   between them, then both of the abbreviations are these three alphabets.
+   For example, `McCrimmon => McC`.
+3. Otherwise, if there are at least two uppercase alphabets, then both of the abbreviations are
+   the concatenation of uppercase alphabets.
+   For example, `Heath-Brown => HB`.
+4. Otherwise, the abbreviations are the first one and three alphabets of the last name,
+   respectively.
+-/
 def getLastNameAbbr (arr : Array String) : String × String :=
   let arr := if arr.size ≤ 1 then arr else arr.filter (not <| isUppercaseRomanNumerals ·)
   match arr with
   | #[] => ("", "")
   | #[s] =>
-    let s := s.toList.toArray.map stripDiacritics |>.filter isAlphabetic
+    let s := getAlphabets s
     let arr : Array Nat := s.zipWithIndex.filterMap fun x =>
       if isUppercase x.1 then .some x.2 else .none
-    if arr.size ≥ 2 then
-      if arr[0]! + 2 = arr[1]! then
-        let s := s.toSubarray.drop arr[0]! |>.take 3 |>.toArray.toList |> String.mk
-        (s, s)
-      else
-        let s := arr.map s.get! |>.toList |> String.mk
-        (s, s)
+    if arr.size = 2 ∧ arr[0]! + 2 = arr[1]! then
+      let s := s.toSubarray.drop arr[0]! |>.take 3 |>.toArray.toList |> String.mk
+      (s, s)
+    else if arr.size ≥ 2 then
+      let s := arr.map s.get! |>.toList |> String.mk
+      (s, s)
     else
       let s := String.mk s.toList
       (s.take 1, s.take 3)
   | _ =>
-    let s := arr.filterMap (·.get? 0) |>.toList |> String.mk
+    let s := arr.filterMap (getAlphabets · |>.get? 0) |>.toList |> String.mk
     (s, s)
 
 /-- Represents the name of a person in bibtex author field. -/
@@ -171,15 +192,16 @@ structure BibtexName where
   /-- The last name without TeX commands, braces and diacritics,
   all letters converted to uppercase. -/
   lastNameWithoutDiacritics : String
-  /-- The one-letter abbreviation of the last name. -/
+  /-- The one-letter abbreviation of the last name. Note that this is not necessarily of
+  one-letter; it is if the last name contains no spaces and with only one uppercase letter. -/
   oneLetterAbbr : String
-  /-- The three-letter abbreviation of the last name. -/
+  /-- The three-letter abbreviation of the last name. Note that this is not necessarily of
+  three-letter; it is if the last name contains no spaces and with only one uppercase letter. -/
   threeLetterAbbr : String
   deriving Repr
 
 /-- Process the first name and last name without TeX commands
-and math equations, remove all braces in them, and produce
-one-letter and three-letter abbreviations from the last name. -/
+and math equations, remove all braces in them, and produce abbreviations of the last name. -/
 def processName (s : String × String) : Except String BibtexName :=
   let removeBraces' (s : String) : Except String String :=
     match removeBraces s.iter with
