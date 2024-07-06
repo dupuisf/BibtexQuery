@@ -61,14 +61,14 @@ def getNameAux : Parsec (Array String) := do
 
 /-- Input a name string already split by spaces and comma,
 return `(Firstname, Lastname)`.
-The braces in the name are preserevd. The logic is:
+The braces in the name are preserved. The logic is:
 
-1. If there is "," in the array, then the items before the first "," are the last name,
+1. If there is a "," in the array, then the items before the first "," are the last name,
    and the items after the first "," are the first name.
 2. Otherwise, if the last item begins with "{" and ends with "}", then it is the last name
    (after removing the outmost braces), the remaining items are the first name.
-3. Otherwise, if there is an item begins with a lowercase letter, then the items before the first of
-   such item are the first name, the remaining items are the last name.
+3. Otherwise, if there is an item that begins with a lowercase letter, then the items before 
+   the first of such item are the first name, the remaining items are the last name.
 4. Otherwise, the last item is the last name, the remaining items are the first name.
 -/
 def getName (arr : Array String) : String × String :=
