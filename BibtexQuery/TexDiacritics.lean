@@ -29,8 +29,21 @@ def ws' : Parsec String :=  manyChars <| satisfy fun c =>
 def normalChar : Parsec Char := satisfy fun c =>
   c != '\\' && c != '$' && c != '{' && c != '}'
 
+/-- Replace certain sequences (e.g. "--") by their UTF-8 representations. -/
+def replaceChars (s : String) : String :=
+  let arr : Array (String × String) := #[
+    ("---", "\u2014"),
+    ("--", "\u2013"),
+    ("~", "\u00A0"),
+    ("?`", "\u00BF"),
+    ("!`", "\u00A1")
+  ]
+  arr.foldl (fun acc (o, r) => acc.replace o r) s
+
 /-- Match at least one normal characters which is not the beginning of TeX command. -/
-def normalChars : Parsec String := many1Chars normalChar
+def normalChars : Parsec String := do
+  let s ← many1Chars normalChar
+  pure <| replaceChars s
 
 /-- Match a TeX command starting with `\`, potentially with trailing whitespaces. -/
 def texCommand : Parsec String := pchar '\\' *> attempt do
