@@ -118,6 +118,8 @@ def texDiacriticsCommand (p : Parsec String) : Parsec String := do
   | "\\i" => pure "ı" | "\\j" => pure "ȷ"
   | "\\ss" => pure "\u00DF" | "\\SS" => pure "\u1E9E"
   | "\\cprime" => pure "\u02B9"
+  | "\\&" => pure "&"
+  | "\\" => pure "\u00A0" -- This should be "\ " but the space is trimmed
   | _ =>
     let ch : String := match cmd with
     | "\\`" => "\u0300" | "\\'" => "\u0301"
