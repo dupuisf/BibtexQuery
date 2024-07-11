@@ -8,6 +8,7 @@ import Lean.Data.HashMap
 import BibtexQuery.Parser
 import BibtexQuery.String
 import BibtexQuery.Query
+import BibtexQuery.Format
 
 /-!
 # BibtexQuery: a simple command-line bibtex query utility
@@ -43,7 +44,7 @@ Usage: bibtex-query command filename [args]
 Commands:
   h: print this help message
   d: check for duplicate entries
-  l: list all entries in abridged form
+  l: sort all entries and list them in plaintext form
   q: print entries that match the given query
   c: print citations of entries that match the given query
 
@@ -58,13 +59,31 @@ Types of queries:
   w: keywords (ex: w.quantum)
 "
 
+mutual
+
+partial def eToPlaintext : Xml.Element → String
+| .Element _ _ c => s!"{c.map cToPlaintext |>.foldl (· ++ ·) ""}"
+
+partial def cToPlaintext : Xml.Content → String
+| .Element e => eToPlaintext e
+| .Comment _ => ""
+| .Character c => c
+
+end
+
+def printEntry (e : ProcessedEntry) : IO Unit :=
+  let s := e.html.map cToPlaintext |>.toList |> String.join
+  IO.println (e.tag ++ "{" ++ e.name ++ "} " ++ s ++ "\n")
+
 def printEntries (ents : List Entry) : IO Unit :=
-  for e in ents do
-    IO.println e.toAbridgedRepr
+  match ents.toArray.mapM ProcessedEntry.ofEntry with
+  | .ok arr =>
+    discard (arr.filterMap id |> sortEntry |> deduplicateTag |>.map ProcessedEntry.format
+      |>.mapM printEntry)
+  | .error err => throw <| IO.userError err
 
 def printMatchingEntries (ents : List Entry) (qs : List Query) : IO Unit := do
-  for e in ents do
-    if e.matchQueries qs then IO.println e.toAbridgedRepr
+  printEntries <| ents.filter (·.matchQueries qs)
 
 def printMatchingCitations (ents : List Entry) (qs : List Query) : IO Unit := do
   for e in ents do
