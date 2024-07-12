@@ -1,10 +1,11 @@
 {"version": "1.1.0",
  "packagesDir": ".lake/packages",
- "packages": [{"url": "https://github.com/fgdorais/lean4-unicode-basic",
+ "packages":
+ [{"url": "https://github.com/fgdorais/lean4-unicode-basic",
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "c74a052aebee847780e165611099854de050adf7",
+   "rev": "f93115d0209de6db335725dee900d379f40c0317",
    "name": "UnicodeBasic",
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
