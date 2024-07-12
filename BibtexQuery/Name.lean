@@ -21,9 +21,9 @@ The math equations are still not allowed.
 
 -/
 
-open Lean Parsec Unicode
+open Lean Parsec Unicode BibtexQuery.TexDiacritics
 
-namespace BibtexQuery.TexDiacritics
+namespace BibtexQuery.Name
 
 partial def getNameBracedAux : Parsec String := do
   let doOne : Parsec (Option String) := fun it =>
@@ -251,4 +251,4 @@ def processNames (s : String) : Except String (Array BibtexName) :=
     | .error it err => .error s!"failed to run getNames on '{it.1}' at pos {it.2}: {err}"
   | .error it err => .error s!"failed to run texDiacritics on '{it.1}' at pos {it.2}: {err}"
 
-end BibtexQuery.TexDiacritics
+end BibtexQuery.Name
