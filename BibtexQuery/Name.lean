@@ -36,19 +36,24 @@ partial def getNameBracedAux : Parsec String := do
       .success it .none
   return String.join (← manyOptions doOne).toList
 
+def normalCharWithoutSpaceOrComma : Parsec Char := satisfy fun c =>
+  match c with
+  | '\\' | '$' | '{' | '}' | ' ' | '\t' | '\r' | '\n' | ',' => false
+  | _ => true
+
+def normalCharsWithoutSpaceOrComma : Parsec String := do
+  let s ← many1Chars normalCharWithoutSpaceOrComma
+  pure <| replaceChars s
+
 /-- Input a bibtex name string without TeX commands
 and math equations, split the string by " " and ",". -/
 def getNameAux : Parsec (Array String) := do
-  let normalChars' : Parsec String := many1Chars <| satisfy fun c =>
-    match c with
-    | '\\' | '$' | '{' | '}' | ' ' | '\t' | '\r' | '\n' | ',' => false
-    | _ => true
   let doOne' : Parsec (Option String) := fun it =>
     if it.hasNext then
       match it.curr with
       | '{' => (.some <$> bracedContent getNameBracedAux) it
       | '}' | ' ' | '\t' | '\r' | '\n' | ',' => .success it .none
-      | _ => (.some <$> normalChars') it
+      | _ => (.some <$> normalCharsWithoutSpaceOrComma) it
     else
       .success it .none
   let doOne : Parsec (Option String) := fun it =>
