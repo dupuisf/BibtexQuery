@@ -5,29 +5,201 @@ Author: Jz Pan
 -/
 
 import Lean.Data.Parsec
+import Lean.Data.Xml.Basic
+import UnicodeBasic
 
 /-!
 
 # TeX diacritics
 
 This file contains functions for TeX diacritics processing.
-The main function is `texDiacritics`, which
+The main functions are `texContent` and `texContents`, which
 will convert all TeX commands for diacritics into UTF-8 characters,
-and error on any other TeX commands which are not in math environment.
+and preserve other TeX commands.
 
 -/
 
-open Lean Parsec
+open Lean Xml Parsec Unicode
 
 namespace BibtexQuery.TexDiacritics
 
-/-- Match a sequence of space characters and return it. -/
-def ws' : Parsec String :=  manyChars <| satisfy fun c =>
-  c == ' ' || c == '\n' || c == '\r' || c == '\t'
+/-- Represents a segment of TeX content of in bibitem. -/
+inductive TexContent
+/-- Represents a non-empty normal string. -/
+| normal (s : String) : TexContent
+/-- Represents some special characters. When output into HTML, some of them (e.g. `\`, `$`)
+will be put into `<span>` to prevent MathJax from recognizing them.
+Some of them (e.g. ` `, `,`) have special meaning in bibitem name processing. -/
+| char (c : Char) : TexContent
+/-- Represents a TeX command. It is always starts with `\`. It may have trailing spaces. -/
+| command (s : String) : TexContent
+/-- Represents a math environment. -/
+| math (dollar s : String) : TexContent
+/-- Represents contents inside `{ ... }`. -/
+| braced (arr : Array TexContent) : TexContent
+deriving Repr
 
-/-- Match a normal character which is not the beginning of TeX command. -/
-def normalChar : Parsec Char := satisfy fun c =>
-  c != '\\' && c != '$' && c != '{' && c != '}'
+namespace TexContent
+
+/-- Add a diacritics character after the first character of the content. -/
+partial def addDiacritics (x : TexContent) (ch : String) :
+    Except String TexContent := do
+  match x with
+  | .normal s =>
+    if s.isEmpty then
+      throw "expected a non-empty normal string, but got ''"
+    else if GeneralCategory.isLetter s.front then
+      return .normal <| s.take 1 ++ ch ++ s.drop 1
+    else
+      throw s!"diacritics character can only be added after a letter, but got '{s.front}'"
+  | .char c => throw s!"expected a non-empty normal string, but got '{c}'"
+  | .command _ => throw "expected a non-empty normal string, but got a TeX command"
+  | .math _ _ => throw "expected a non-empty normal string, but got a math environment"
+  | .braced arr =>
+    if h : 0 < arr.size then
+      return .braced <| #[← arr[0].addDiacritics ch] ++ (arr.toSubarray.drop 1 |>.toArray)
+    else
+      throw "expected a non-empty normal string, but got '{}'"
+
+mutual
+
+/-- Convert a TeX content to its original string.
+This is not necessarily identical to the original input. -/
+partial def toString (x : TexContent) : String :=
+  match x with
+  | .normal s => s
+  | .char c => c.toString
+  | .command s => s
+  | .math dollar s => dollar ++ s ++ dollar
+  | .braced arr => "{" ++ toStringArray arr ++ "}"
+
+partial def toStringArray (arr : Array TexContent) : String :=
+  arr.map toString |>.toList |> String.join
+
+end
+
+mutual
+
+/-- Convert a TeX content to plaintext, discarding TeX commands and braces. -/
+partial def toPlaintext (x : TexContent) : String :=
+  match x with
+  | .normal s => s
+  | .char c => c.toString
+  | .command _ => ""
+  | .math dollar s => dollar ++ s ++ dollar
+  | .braced arr => toPlaintextArray arr
+
+partial def toPlaintextArray (arr : Array TexContent) : String :=
+  arr.map toPlaintext |>.toList |> String.join
+
+end
+
+mutual
+
+/-- Get the first character of the plaintext of a TeX content. -/
+partial def getFirstChar (x : TexContent) : Option Char :=
+  match x with
+  | .normal s => s.get? 0
+  | .char c => c
+  | .command _ => .none
+  | .math dollar _ => dollar.get? 0
+  | .braced arr => getFirstCharArray arr
+
+partial def getFirstCharArray (arr : Array TexContent) : Option Char :=
+  arr.findSome? getFirstChar
+
+end
+
+mutual
+
+/-- Get the last character of the plaintext of a TeX content. -/
+partial def getLastChar (x : TexContent) : Option Char :=
+  match x with
+  | .normal s => if s.isEmpty then .none else s.back
+  | .char c => c
+  | .command _ => .none
+  | .math dollar _ => dollar.get? 0
+  | .braced arr => getLastCharArray arr
+
+partial def getLastCharArray (arr : Array TexContent) : Option Char :=
+  arr.findSomeRev? getLastChar
+
+end
+
+mutual
+
+/-- Convert a TeX content to HTML, represented by an array of `Lean.Xml.Content`.
+A few TeX commands can be converted to corresponding HTML. -/
+partial def toHtml (x : TexContent) : Array Content :=
+  match x with
+  | .normal s => #[.Character s]
+  | .char c =>
+    let ret : Content := match c with
+    | '\\' | '$' => .Element ⟨ "span", RBMap.empty, #[.Character c.toString] ⟩
+    | _ => .Character c.toString
+    #[ret]
+  | .command cmd =>
+    let ret : Content := match cmd.trim with
+    | "\\\\" => .Element ⟨ "br", RBMap.empty, #[] ⟩
+    | _ => .Element ⟨ "span", RBMap.empty.insert "style" "color:red;", #[.Character cmd] ⟩
+    #[ret]
+  | .math dollar s => #[.Character (dollar ++ s ++ dollar)]
+  | .braced arr => toHtmlArray arr
+
+partial def toHtmlArray (arr : Array TexContent) (i : Nat := 0)
+    (ret : Array Content := #[]) : Array Content :=
+  if h : i < arr.size then
+    if h' : i + 1 < arr.size then
+      if let .command cmd := arr[i] then
+        match cmd.trim with
+        | "\\url" =>
+          let next := arr[i + 1]
+          let x : Content := .Element ⟨ "a", RBMap.empty.insert "href"
+            next.toPlaintext, next.toHtml ⟩
+          toHtmlArray arr (i + 2) (ret ++ #[x])
+        | "\\textrm" =>
+          let next := arr[i + 1]
+          let x : Content := .Element ⟨ "span", RBMap.empty.insert "style"
+            "font-style: normal; font-weight: normal", next.toHtml ⟩
+          toHtmlArray arr (i + 2) (ret ++ #[x])
+        | "\\textbf" =>
+          let next := arr[i + 1]
+          let x : Content := .Element ⟨ "b", RBMap.empty, next.toHtml ⟩
+          toHtmlArray arr (i + 2) (ret ++ #[x])
+        | "\\textit" =>
+          let next := arr[i + 1]
+          let x : Content := .Element ⟨ "i", RBMap.empty, next.toHtml ⟩
+          toHtmlArray arr (i + 2) (ret ++ #[x])
+        | "\\emph" =>
+          let next := arr[i + 1]
+          let x : Content := .Element ⟨ "em", RBMap.empty, next.toHtml ⟩
+          toHtmlArray arr (i + 2) (ret ++ #[x])
+        | "\\texttt" =>
+          let next := arr[i + 1]
+          let x : Content := .Element ⟨ "span", RBMap.empty.insert "style"
+            "font-family: monospace", next.toHtml ⟩
+          toHtmlArray arr (i + 2) (ret ++ #[x])
+        | "\\textsc" =>
+          let next := arr[i + 1]
+          let x : Content := .Element ⟨ "span", RBMap.empty.insert "style"
+            "font-variant: small-caps", next.toHtml ⟩
+          toHtmlArray arr (i + 2) (ret ++ #[x])
+        | _ => toHtmlArray arr (i + 1) (ret ++ arr[i].toHtml)
+      else
+        toHtmlArray arr (i + 1) (ret ++ arr[i].toHtml)
+    else
+       toHtmlArray arr (i + 1) (ret ++ arr[i].toHtml)
+  else
+    ret
+
+end
+
+end TexContent
+
+/-- Match a sequence of space characters and return it. -/
+def ws' : Parsec String := manyChars <| satisfy fun
+  | ' ' | '\t' | '\r' | '\n' => true
+  | _ => false
 
 /-- Replace certain sequences (e.g. "--") by their UTF-8 representations. -/
 def replaceChars (s : String) : String :=
@@ -40,27 +212,20 @@ def replaceChars (s : String) : String :=
   ]
   arr.foldl (fun acc (o, r) => acc.replace o r) s
 
-/-- Match at least one normal characters which is not the beginning of TeX command. -/
-def normalChars : Parsec String := do
-  let s ← many1Chars normalChar
-  pure <| replaceChars s
-
 /-- Match a TeX command starting with `\`, potentially with trailing whitespaces. -/
 def texCommand : Parsec String := pchar '\\' *> attempt do
   let s ← manyChars asciiLetter
   if s.isEmpty then
-    return "\\" ++ toString (← anyChar) ++ (← ws')
+    -- some commands preserve trailing whitespaces
+    let c ← anyChar
+    match c with
+    | '&' | '#' | '{' | '}' | '$' | '_' => return "\\" ++ toString c
+    | _ => return "\\" ++ toString c ++ (← ws')
+  else if let .some '*' ← peek? then
+    skip
+    return "\\" ++ s ++ "*" ++ (← ws')
   else
-    match ← peek? with
-    | .some c =>
-      match c with
-      | '*' =>
-        skip
-        return "\\" ++ s ++ toString c ++ (← ws')
-      | _ =>
-        return "\\" ++ s ++ (← ws')
-    | .none =>
-      return "\\" ++ s
+    return "\\" ++ s ++ (← ws')
 
 /-- Similar to `texCommand` but it excludes some commands. -/
 def texCommand' (exclude : Array String) : Parsec String := attempt do
@@ -73,10 +238,6 @@ def texCommand' (exclude : Array String) : Parsec String := attempt do
 def bracedContent (p : Parsec String) : Parsec String :=
   pchar '{' *> (("{" ++ · ++ "}") <$> p) <* pchar '}'
 
-/-- Similar to `bracedContent` but it does not output braces. -/
-def bracedContent' (p : Parsec String) : Parsec String :=
-  pchar '{' *> p <* pchar '}'
-
 partial def manyOptions {α} (p : Parsec (Option α)) (acc : Array α := #[]) :
     Parsec (Array α) := fun it =>
   match p it with
@@ -87,6 +248,9 @@ partial def manyOptions {α} (p : Parsec (Option α)) (acc : Array α := #[]) :
   | .error it err => .error it err
 
 partial def mathContentAux : Parsec String := do
+  let normalChars : Parsec String := many1Chars <| satisfy fun
+    | '\\' | '$' | '{' | '}' => false
+    | _ => true
   let doOne : Parsec (Option String) := fun it =>
     if it.hasNext then
       match it.curr with
@@ -102,107 +266,110 @@ partial def mathContentAux : Parsec String := do
   return String.join (← manyOptions doOne).toList
 
 /-- Match a math content. Returns `Option.none` if it does not start with `\(`, `\[` or `$`. -/
-def mathContent : Parsec (Option String) := fun it =>
-  let aux (beginning ending dollar : String) : Parsec String :=
-    pstring beginning *> ((dollar ++ · ++ dollar) <$> mathContentAux) <* pstring ending
+def mathContent : Parsec (Option TexContent) := fun it =>
+  let aux (beginning ending : String) : Parsec String :=
+    pstring beginning *> mathContentAux <* pstring ending
   let substr := it.extract (it.forward 2)
   if substr = "\\[" then
-    (.some <$> aux "\\[" "\\]" "$$") it
+    ((.some <| .math "$$" ·) <$> aux "\\[" "\\]") it
   else if substr = "\\(" then
-    (.some <$> aux "\\(" "\\)" "$") it
+    ((.some <| .math "$" ·) <$> aux "\\(" "\\)") it
   else if substr = "$$" then
-    (.some <$> aux "$$" "$$" "$$") it
+    ((.some <| .math "$$" ·) <$> aux "$$" "$$") it
   else if it.curr = '$' then
-    (.some <$> aux "$" "$" "$") it
+    ((.some <| .math "$" ·) <$> aux "$" "$") it
   else
     .success it .none
 
-/-- Match a TeX command for diacritics, return the corresponding UTF-8 string.
-Sometimes it needs to read the character after the command,
-in this case the `p` is used to read braced content. -/
-def texDiacriticsCommand (p : Parsec String) : Parsec String := do
-  let cmd ← String.trim <$> texCommand
-  match cmd with
-  | "\\oe" => pure "œ" | "\\OE" => pure "Œ"
-  | "\\ae" => pure "æ" | "\\AE" => pure "Æ"
-  | "\\aa" => pure "å" | "\\AA" => pure "Å"
-  | "\\o" => pure "ø" | "\\O" => pure "Ø"
-  | "\\l" => pure "ł" | "\\L" => pure "Ł"
-  | "\\i" => pure "ı" | "\\j" => pure "ȷ"
-  | "\\ss" => pure "\u00DF" | "\\SS" => pure "\u1E9E"
-  | "\\cprime" => pure "\u02B9"
-  | "\\&" => pure "&"
-  | "\\" => pure "\u00A0" -- This should be "\ " but the space is trimmed
-  | _ =>
-    let ch : String := match cmd with
-    | "\\`" => "\u0300" | "\\'" => "\u0301"
-    | "\\^" => "\u0302" | "\\\"" => "\u0308"
-    | "\\~" => "\u0303" | "\\=" => "\u0304"
-    | "\\." => "\u0307" | "\\u" => "\u0306"
-    | "\\v" => "\u030C" | "\\H" => "\u030B"
-    | "\\t" => "\u0361" | "\\c" => "\u0327"
-    | "\\d" => "\u0323" | "\\b" => "\u0331"
-    | "\\k" => "\u0328"
-    | _ => ""
-    if ch.isEmpty then
-      fail s!"unsupported command: '{cmd}'"
+partial def rawContentAux : Parsec String := do
+  let normalChars : Parsec String := many1Chars <| satisfy fun
+    | '\\' | '{' | '}' => false
+    | _ => true
+  let doOne : Parsec (Option String) := fun it =>
+    if it.hasNext then
+      match it.curr with
+      | '{' => (.some <$> bracedContent rawContentAux) it
+      | '\\' => (.some <$> texCommand) it
+      | '}' => .success it .none
+      | _ => (.some <$> normalChars) it
     else
-      let doOne : Parsec String := fun it =>
-        if it.hasNext then
-          match it.curr with
-          | '{' => bracedContent p it
-          | _ => normalChars it
-        else
-          .error it "character expected"
-      let s ← doOne
-      if s.startsWith "{" then
-        if s.length < 3 then
-          fail s!"expected string of length at least 3, but got '{s}'"
-        else
-          return s.take 2 ++ ch ++ s.drop 2
+      .success it .none
+  return String.join (← manyOptions doOne).toList
+
+/-- Match a TeX command for diacritics, return the processed TeX contents.
+Sometimes it needs to read the contents after the command, in this case the `p` is used. -/
+def texDiacriticsCommand (p : Parsec (Option TexContent)) : Parsec (Option TexContent) := do
+  let cmd ← texCommand
+  -- some special commands
+  if cmd.trim = "\\url" then
+    let s ← pchar '{' *> rawContentAux <* pchar '}'
+    return .some <| .braced #[.command cmd, .braced <| #[.normal s]]
+  -- some special characters need to put into `<span>`
+  let c : Char := match cmd.trim with
+  | "\\$" => '$' | "\\textbackslash" => '\\'
+  | _ => ' '
+  if c ≠ ' ' then return .some <| .char c
+  -- some other characters
+  let s : String := match cmd.trim with
+  | "\\oe" => "œ" | "\\OE" => "Œ"
+  | "\\ae" => "æ" | "\\AE" => "Æ"
+  | "\\aa" => "å" | "\\AA" => "Å"
+  | "\\o" => "ø" | "\\O" => "Ø"
+  | "\\l" => "ł" | "\\L" => "Ł"
+  | "\\i" => "ı" | "\\j" => "ȷ"
+  | "\\ss" => "\u00DF" | "\\SS" => "\u1E9E"
+  | "\\cprime" => "\u02B9"
+  | "\\&" => "&" | "\\#" => "#"
+  | "\\{" => "{" | "\\}" => "}"
+  | "\\_" => "_"
+  | "\\" => "\u00A0" -- This should be "\ " but the space is trimmed
+  | _ => ""
+  if not s.isEmpty then return .some <| .normal s
+  -- diacritics characters
+  let s : String := match cmd.trim with
+  | "\\`" => "\u0300" | "\\'" => "\u0301"
+  | "\\^" => "\u0302" | "\\\"" => "\u0308"
+  | "\\~" => "\u0303" | "\\=" => "\u0304"
+  | "\\." => "\u0307" | "\\u" => "\u0306"
+  | "\\v" => "\u030C" | "\\H" => "\u030B"
+  | "\\t" => "\u0361" | "\\c" => "\u0327"
+  | "\\d" => "\u0323" | "\\b" => "\u0331"
+  | "\\k" => "\u0328"
+  | _ => ""
+  if s.isEmpty then return .some <| .command cmd
+  match ← p with
+  | .some next =>
+    match next.addDiacritics s with
+    | .ok ret => return .some ret
+    | .error err => fail err
+  | .none => fail "expected a non-empty normal string"
+
+/-- Match a segment of TeX content.
+The TeX commands for diacritics will be converted into UTF-8 characters.
+Other TeX commands are preserved.
+Returns `Option.none` if it can't match any and there are no errors. -/
+partial def texContent : Parsec (Option TexContent) := fun it =>
+  let normalChars' : Parsec String := many1Chars <| satisfy fun
+    | '\\' | '$' | '{' | '}' | ' ' | '\t' | '\r' | '\n' | ',' => false
+    | _ => true
+  match mathContent it with
+  | .success it ret =>
+    match ret with
+    | .some ret => .success it (.some ret)
+    | .none =>
+      if it.hasNext then
+        match it.curr with
+        | ' ' | '\t' | '\r' | '\n' => ((fun _ => .some (.char ' ')) <$> ws) it
+        | ',' => .success it.next <| .some <| .char it.curr
+        | '\\' => texDiacriticsCommand texContent it
+        | '{' => ((.some <| .braced ·) <$> (pchar '{' *> manyOptions texContent <* pchar '}')) it
+        | '}' => .success it .none
+        | _ => ((.some <| .normal <| replaceChars ·) <$> normalChars') it
       else
-        if s.isEmpty then
-          fail "expected a non-empty string"
-        else
-          return s.take 1 ++ ch ++ s.drop 1
+        .success it .none
+  | .error it err => .error it err
 
-/-- Convert all TeX commands for diacritics into UTF-8 characters,
-and error on any other TeX commands which are not in math environment. -/
-partial def texDiacritics : Parsec String := do
-  let doOne : Parsec (Option String) := fun it =>
-    if it.hasNext then
-      match mathContent it with
-      | .success it ret =>
-        match ret with
-        | .some ret => .success it (.some ret)
-        | .none =>
-          match it.curr with
-          | '{' => (.some <$> bracedContent texDiacritics) it
-          | '\\' => (.some <$> texDiacriticsCommand texDiacritics) it
-          | '}' => .success it .none
-          | _ => (.some <$> normalChars) it
-      | .error it err => .error it err
-    else
-      .success it .none
-  return String.join (← manyOptions doOne).toList
-
-/-- Remove all braces except for those in math environment,
-and error on any TeX commands which are not in math environment. -/
-partial def removeBraces : Parsec String := do
-  let doOne : Parsec (Option String) := fun it =>
-    if it.hasNext then
-      match mathContent it with
-      | .success it ret =>
-        match ret with
-        | .some ret => .success it (.some ret)
-        | .none =>
-          match it.curr with
-          | '{' => (.some <$> bracedContent' removeBraces) it
-          | '}' => .success it .none
-          | _ => (.some <$> normalChars) it
-      | .error it err => .error it err
-    else
-      .success it .none
-  return String.join (← manyOptions doOne).toList
+/-- Match a sequence of TeX contents. -/
+def texContents : Parsec (Array TexContent) := manyOptions texContent
 
 end BibtexQuery.TexDiacritics
