@@ -287,7 +287,28 @@ def formatChapterAndPages : Array Content :=
   ] #[.Character ", "]
 
 def formatEdition : Option (Array Content) :=
-  (mkStr · "" " edition") <$> e.tags.find? "edition"
+  if let .some arr := e.tags.find? "edition" then
+    let s := TexContent.toPlaintextArray arr |> stripDiacriticsFromString |>.map getLowerChar
+    if s.endsWith " ed." || s.endsWith " ed" || (s.replace "edition" "").length < s.length then
+      TexContent.toHtmlArray arr
+    else if let .some n := s.toNat? then
+      let s : String := match n with
+      | 0 => "Zeroth" | 1 => "First" | 2 => "Second" | 3 => "Third"
+      | 4 => "Fourth" | 5 => "Fifth" | 6 => "Sixth" | 7 => "Seventh"
+      | 8 => "Eighth" | 9 => "Ninth" | 10 => "Tenth" | 11 => "Eleventh"
+      | 12 => "Twelfth"
+      | _ => toString n ++ match n % 100 with
+        | 11 | 12 => "th"
+        | _ => match n % 10 with
+          | 1 => "st"
+          | 2 => "nd"
+          | 3 => "rd"
+          | _ => "th"
+      .some #[.Character (s ++ " edition")]
+    else
+      mkStr arr "" " edition"
+  else
+    .none
 
 def formatAddressOrganizationPublisherDate (includeOrganization : Bool) :
     Array Content :=
@@ -340,11 +361,11 @@ def formatBook : Array Content :=
   toplevel #[
     formatAuthorOrEditor e,
     sentence #[mkTag "i" <$> e.tags.find? "title"],
+    sentence1 <$> formatEdition e,
     formatVolumeAndSeries e true,
     sentence #[
       mkStr <$> e.tags.find? "publisher",
       mkStr <$> e.tags.find? "address",
-      formatEdition e,
       e.dateHtml
     ],
     formatISBN e,
@@ -371,13 +392,13 @@ def formatInBook : Array Content :=
     formatAuthorOrEditor e,
     sentence #[
       mkTag "i" <$> e.tags.find? "title",
+      formatEdition e,
       formatChapterAndPages e
     ],
     formatVolumeAndSeries e true,
     sentence #[
       mkStr <$> e.tags.find? "publisher",
       mkStr <$> e.tags.find? "address",
-      formatEdition e,
       e.dateHtml,
       mkStr <$> e.tags.find? "note"
     ],
@@ -391,13 +412,13 @@ def formatInCollection : Array Content :=
     (fun x => #[.Character "In "] ++ x) <$> sentence #[
       e.editorHtml,
       mkTag "i" <$> e.tags.find? "booktitle",
+      formatEdition e,
       formatVolumeAndSeries e false,
       formatChapterAndPages e
     ],
     sentence #[
       mkStr <$> e.tags.find? "publisher",
       mkStr <$> e.tags.find? "address",
-      formatEdition e,
       e.dateHtml
     ],
     formatWebRefs e
@@ -424,10 +445,10 @@ def formatManual : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
     sentence #[mkTag "i" <$> e.tags.find? "title"],
+    sentence1 <$> formatEdition e,
     sentence #[
       mkStr <$> e.tags.find? "organization",
       mkStr <$> e.tags.find? "address",
-      formatEdition e,
       e.dateHtml
     ],
     sentence' <$> e.tags.find? "note",
