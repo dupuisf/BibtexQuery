@@ -12,109 +12,63 @@ import UnicodeBasic
 # Bibtex name processing
 
 This file contains functions for bibtex name processing.
-Unless stated otherwise, the input string should have no TeX commands
-and math equations. Braces are allowed.
 
-An exception is the main function `processNames` which inputs a bibtex name string,
-allowing TeX diacritics commands, return an array of `BibtexName`.
-The math equations are still not allowed.
+The main function is `processNames` which inputs an array of `TexContent`,
+return an array of `BibtexName`.
 
 -/
 
-open Lean Parsec Unicode BibtexQuery.TexDiacritics
+open Lean Unicode BibtexQuery.TexDiacritics
 
 namespace BibtexQuery.Name
 
-partial def getNameBracedAux : Parsec String := do
-  let doOne : Parsec (Option String) := fun it =>
-    if it.hasNext then
-      match it.curr with
-      | '{' => (.some <$> bracedContent getNameBracedAux) it
-      | '}' => .success it .none
-      | _ => (.some <$> normalChars) it
-    else
-      .success it .none
-  return String.join (← manyOptions doOne).toList
+/-- Input an array of `TexContent`, split them by " " and ",". -/
+def getNameAux (arr : Array TexContent) : Array (Array TexContent) :=
+  arr.foldl (fun acc s =>
+    match s with
+    | .char ' ' =>
+      acc.push #[]
+    | .char ',' =>
+      acc.push #[s] |>.push #[]
+    | _ =>
+      acc.modify (acc.size - 1) (Array.push · s)) #[#[]] |>.filter (not ·.isEmpty)
 
-def normalCharWithoutSpaceOrComma : Parsec Char := satisfy fun c =>
-  match c with
-  | '\\' | '$' | '{' | '}' | ' ' | '\t' | '\r' | '\n' | ',' => false
-  | _ => true
-
-def normalCharsWithoutSpaceOrComma : Parsec String := do
-  let s ← many1Chars normalCharWithoutSpaceOrComma
-  pure <| replaceChars s
-
-/-- Input a bibtex name string without TeX commands
-and math equations, split the string by " " and ",". -/
-def getNameAux : Parsec (Array String) := do
-  let doOne' : Parsec (Option String) := fun it =>
-    if it.hasNext then
-      match it.curr with
-      | '{' => (.some <$> bracedContent getNameBracedAux) it
-      | '}' | ' ' | '\t' | '\r' | '\n' | ',' => .success it .none
-      | _ => (.some <$> normalCharsWithoutSpaceOrComma) it
-    else
-      .success it .none
-  let doOne : Parsec (Option String) := fun it =>
-    if it.hasNext then
-      match it.curr with
-      | '}' => .success it .none
-      | ' ' | '\t' | '\r' | '\n' => (.some <$> ws') it
-      | ',' => .success it.next ","
-      | _ => ((.some <| String.join ·.toList) <$> manyOptions doOne') it
-    else
-      .success it .none
-  let arr ← manyOptions doOne
-  return arr.filterMap fun s =>
-    let t := s.trim
-    if t.isEmpty then .none else .some t
-
-/-- Input a name string already split by spaces and comma,
-return `(Firstname, Lastname)`.
+/-- Input a name string already split by " " and ",", return `(Firstname, Lastname)`.
 The braces in the name are preserved. The logic is:
 
 1. If there is a "," in the array, then the items before the first "," are the last name,
    and the items after the first "," are the first name.
-2. Otherwise, if the last item begins with "{" and ends with "}", then it is the last name
-   (after removing the outmost braces), the remaining items are the first name.
+2. Otherwise, if the last item begins with "{" and ends with "}", then it is the last name,
+   the remaining items are the first name.
 3. Otherwise, if there is an item that begins with a lowercase letter, then the items before
    the first of such item are the first name, the remaining items are the last name.
 4. Otherwise, the last item is the last name, the remaining items are the first name.
 -/
-def getName (arr : Array String) : String × String :=
-  if arr.isEmpty then
-    ("", "")
-  else
-    let join' (arr : Subarray String) : String := arr.foldl (fun acc s =>
-      acc ++ (if acc.isEmpty || s.isEmpty || s == "," then "" else " ") ++ s) ""
-    match arr.getIdx? "," with
-    | .some n =>
-      (arr.toSubarray.drop (n + 1) |> join', arr.toSubarray.take n |> join')
-    | .none =>
-      let s := arr.get! (arr.size - 1)
-      if s.startsWith "{" && s.endsWith "}" then
-        (arr.toSubarray.take (arr.size - 1) |> join',
-          s.toSubstring.drop 1 |>.dropRight 1 |>.toString)
-      else
-        match arr.findIdx? fun s => isLowercase s.front with
-        | .some i =>
-          (arr.toSubarray.take i |> join', arr.toSubarray.drop i |> join')
-        | .none =>
-          (arr.toSubarray.take (arr.size - 1) |> join', s)
+def getName (arr : Array (Array TexContent)) :
+    Array (Array TexContent) × Array (Array TexContent) :=
+  match arr.findIdx? (fun
+    | #[.char ','] => true
+    | _ => false) with
+  | .some n =>
+    (arr.toSubarray.drop (n + 1) |>.toArray, arr.toSubarray.take n |>.toArray)
+  | .none =>
+    let i := match arr.back? with
+    | .some #[.braced _] => arr.size - 1
+    | _ => arr.findIdx? (fun s => s.findSome? TexContent.getFirstChar
+      |>.getD ' ' |> isLowercase) |>.getD (arr.size - 1)
+    (arr.toSubarray.take i |>.toArray, arr.toSubarray.drop i |>.toArray)
 
-/-- Input a bibtex name string without TeX commands
-and math equations, return an array of `(Firstname, Lastname)`.
+/-- Input an array of `TexContent`, return an array of `(Firstname, Lastname)`.
 The braces in the name are preserevd. -/
-def getNames : Parsec (Array (String × String)) := do
-  let arr ← getNameAux
-  let arr2 : Array (Array String) := arr.foldl (fun acc s =>
-    if s = "and" then
-      acc.push #[]
-    else
-      acc.modify (acc.size - 1) (Array.push · s)) #[#[]]
-  return arr2.filterMap fun arr =>
-    let ret := getName arr
+def getNames (arr : Array TexContent) :
+    Array (Array (Array TexContent) × Array (Array TexContent)) :=
+  let arr := getNameAux arr
+  let arr2 : Array (Array (Array TexContent)) := arr.foldl (fun acc s =>
+    match s with
+    | #[.normal "and"] => acc.push #[]
+    | _ => acc.modify (acc.size - 1) (Array.push · s)) #[#[]]
+  arr2.filterMap fun x =>
+    let ret := getName x
     if ret.1.isEmpty && ret.2.isEmpty then .none else .some ret
 
 /-- Strip diacritics from a character. -/
@@ -193,10 +147,10 @@ def getLastNameAbbr (arr : Array String) : String × String :=
 
 /-- Represents the name of a person in bibtex author field. -/
 structure BibtexName where
-  /-- The first name without TeX commands and braces. -/
-  firstName : String
-  /-- The last name without TeX commands and braces. -/
-  lastName : String
+  /-- The first name. -/
+  firstName : Array (Array TexContent)
+  /-- The last name. -/
+  lastName : Array (Array TexContent)
   /-- The first name without TeX commands, braces and diacritics,
   all letters converted to uppercase. -/
   firstNameWithoutDiacritics : String
@@ -211,44 +165,60 @@ structure BibtexName where
   one author. Note that this is not necessarily of three-letter;
   it is if the last name contains no spaces and with only one uppercase letter. -/
   threeLetterAbbr : String
-  deriving Repr
+deriving Repr
 
-/-- Process the first name and last name without TeX commands
-and math equations, remove all braces in them, and produce abbreviations of the last name. -/
-def processName (s : String × String) : Except String BibtexName :=
-  let removeBraces' (s : String) : Except String String :=
-    match removeBraces s.iter with
-    | .success _ s => .ok s
-    | .error it err => .error s!"failed to run removeBraces on '{it.1}' at pos {it.2}: {err}"
-  match removeBraces' s.1 with
-  | .ok firstName =>
-    match removeBraces' s.2 with
-    | .ok lastName =>
-      match getNameAux s.2.iter with
-      | .success _ arr =>
-        match arr.mapM removeBraces' with
-        | .ok arr =>
-          let abbr := getLastNameAbbr <| arr.filter (not ·.trim.isEmpty)
-          .ok {
-            firstName := firstName
-            lastName := lastName
-            firstNameWithoutDiacritics := stripDiacriticsFromString firstName |>.map getUpperChar
-            lastNameWithoutDiacritics := stripDiacriticsFromString lastName |>.map getUpperChar
-            oneLetterAbbr := abbr.1
-            threeLetterAbbr := abbr.2
-          }
-        | .error err => .error err
-      | .error it err => .error s!"failed to run getNameAux on '{it.1}' at pos {it.2}: {err}"
-    | .error err => .error err
-  | .error err => .error err
+namespace BibtexName
 
-/-- Input a bibtex name string without math equations, return an array of `BibtexName`. -/
-def processNames (s : String) : Except String (Array BibtexName) :=
-  match texDiacritics s.iter with
-  | .success _ s =>
-    match getNames s.iter with
-    | .success _ arr => arr.mapM processName
-    | .error it err => .error s!"failed to run getNames on '{it.1}' at pos {it.2}: {err}"
-  | .error it err => .error s!"failed to run texDiacritics on '{it.1}' at pos {it.2}: {err}"
+/-- Convert a `BibtexName` to `Firstname Lastname` with TeX commands and braces.
+This is not necessarily identical to the original input. -/
+def toString (x : BibtexName) : String :=
+  let g (arr : Array (Array TexContent)) : String :=
+    " ".intercalate (arr.map TexContent.toStringArray |>.toList)
+  g <| x.firstName ++ x.lastName
+
+def toStringArray (arr : Array BibtexName) : String :=
+  " and ".intercalate (arr.map toString |>.filter (not ·.isEmpty) |>.toList)
+
+/-- Convert a `BibtexName` to `Firstname Lastname` without TeX commands and braces. -/
+def toPlaintext (x : BibtexName) : String :=
+  let g (arr : Array (Array TexContent)) : String :=
+    " ".intercalate (arr.map TexContent.toPlaintextArray |>.toList)
+  g <| x.firstName ++ x.lastName
+
+def toPlaintextArray (arr : Array BibtexName) : String :=
+  ", ".intercalate (arr.map toString |>.filter (not ·.isEmpty) |>.toList)
+
+/-- Convert a `BibtexName` to `Firstname Lastname` of HTML form. -/
+def toHtml (x : BibtexName) : Array Xml.Content :=
+  let g (arr : Array (Array TexContent)) : Array Xml.Content :=
+    arr.foldl (fun acc s =>
+      let t := TexContent.toHtmlArray s
+      acc ++ (if acc.isEmpty || t.isEmpty then #[] else #[.Character " "]) ++ t) #[]
+  g <| x.firstName ++ x.lastName
+
+def toHtmlArray (arr : Array BibtexName) : Array Xml.Content :=
+  arr.foldl (fun acc s =>
+    let t := s.toHtml
+    acc ++ (if acc.isEmpty || t.isEmpty then #[] else #[.Character ", "]) ++ t) #[]
+
+end BibtexName
+
+/-- Process the first name and last name, produce abbreviations of the last name. -/
+def processName (s : Array (Array TexContent) × Array (Array TexContent)) : BibtexName :=
+  let g (arr : Array (Array TexContent)) : String :=
+    " ".intercalate (arr.map TexContent.toPlaintextArray |>.toList)
+  let abbr := getLastNameAbbr <| s.2.map TexContent.toPlaintextArray
+  {
+    firstName := s.1
+    lastName := s.2
+    firstNameWithoutDiacritics := stripDiacriticsFromString (g s.1) |>.map getUpperChar
+    lastNameWithoutDiacritics := stripDiacriticsFromString (g s.2) |>.map getUpperChar
+    oneLetterAbbr := abbr.1
+    threeLetterAbbr := abbr.2
+  }
+
+/-- Input an array of `TexContent`, return an array of `BibtexName`. -/
+def processNames (arr: Array TexContent) : Array BibtexName :=
+  arr |> getNames |>.map processName
 
 end BibtexQuery.Name
