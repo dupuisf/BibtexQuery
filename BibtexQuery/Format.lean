@@ -205,10 +205,16 @@ def arrayConcat {α} (arr : Array (Option (Array α))) (sep : Array α := #[]) :
 def words (arr : Array (Option (Array Content))) : Array Content :=
   arrayConcat arr #[.Character " "]
 
+def canEndSentence (c : Char) : Bool :=
+  match c with
+  | '.' | '?' | '!' | '…' | '。' | '？' | '！' | '\uFF0E' | '\uFF61'
+  | '\u203C' | '\u203D' | '\u2047' | '\u2048' | '\u2049' => true
+  | _ => false
+
 def sentence1 (arr : Array Content) : Array Content :=
   if arr.isEmpty then
     #[]
-  else if GeneralCategory.isPunctuation (getLastCharOfArrayContent arr |>.getD ' ') then
+  else if canEndSentence (getLastCharOfArrayContent arr |>.getD ' ') then
     arr
   else
     arr ++ #[.Character "."]
