@@ -31,7 +31,7 @@ inductive TexContent
 will be put into `<span>` to prevent MathJax from recognizing them.
 Some of them (e.g. ` `, `,`) have special meaning in bibitem name processing. -/
 | char (c : Char) : TexContent
-/-- Represents a TeX command. It is always starts with `\`. It may have trailing spaces. -/
+/-- Represents a TeX command. It always starts with `\`. It may have trailing spaces. -/
 | command (s : String) : TexContent
 /-- Represents a math environment. -/
 | math (dollar s : String) : TexContent
