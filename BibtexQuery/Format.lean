@@ -228,6 +228,26 @@ def sentence' (content : Array TexContent) : Array Content :=
 def toplevel (arr : Array (Option (Array Content))) : Array Content :=
   arrayConcat arr #[.Character "\n"]
 
+def mkUrl (url : String) : Array Content :=
+  if url.isEmpty then #[] else #[.Character "URL: "] ++ mkHref url #[.normal url]
+
+def mkWebRef (urlPrefix namePrefix url : String) : Array Content :=
+    let s :=
+      if url.toLower.startsWith urlPrefix.toLower then
+        url.drop urlPrefix.length
+      else if url.toLower.startsWith namePrefix.toLower then
+        url.drop namePrefix.length
+      else
+        url
+    if s.toLower.startsWith "http" then
+      -- the url does not starts with `urlPrefix` or `namePrefix`,
+      -- but still starts with "http"
+      mkUrl url
+    else if s.isEmpty then
+      #[]
+    else
+      mkHref (urlPrefix ++ s) #[.normal (namePrefix ++ s)]
+
 /-!
 
 ### Partial templates
@@ -245,24 +265,39 @@ def formatVolumeAndPages : Option (Array Content) := do
     ]
   | .none => mkStr pages "pages "
 
-def formatWebRefs : Array Content :=
-  let formatUrl : Option (Array Content) := do
-    let s ← TexContent.toPlaintextArray <$> e.tags.find? "url"
-    if s.isEmpty then .none else .some <| #[.Character "URL: "] ++ mkHref s #[.normal s]
-  let formatUrl' (tagName urlPrefix namePrefix : String) : Option (Array Content) := do
-    let s ← TexContent.toPlaintextArray <$> e.tags.find? tagName
-    let s :=
-      if s.startsWith urlPrefix then
-        s.drop urlPrefix.length
-      else if s.startsWith namePrefix then
-        s.drop namePrefix.length
+def formatEprint : Option (Array Content) := do
+  let eprint ← TexContent.toPlaintextArray <$> e.tags.find? "eprint"
+  let eprinttype :=
+    TexContent.toPlaintextArray <$> (e.tags.find? "eprinttype" <|> e.tags.find? "archiveprefix")
+      |>.getD "arXiv"
+  let eprintlist : Array (Array String × String × String) := #[
+    (#["arxiv"], "https://arxiv.org/abs/", "arXiv:"),
+    (#["pmcid", "pmc"], "https://www.ncbi.nlm.nih.gov/pmc/articles/", "PMCID:")
+  ]
+  let checkEprint : Array String × String × String → Option (Array Content) :=
+    fun (lst, urlPrefix, namePrefix) =>
+      if lst.contains eprinttype.toLower then
+        let ret := mkWebRef urlPrefix namePrefix eprint
+        if ret.isEmpty then .none else .some ret
       else
-        s
-    if s.isEmpty then .none else mkHref (urlPrefix ++ s) #[.normal (namePrefix ++ s)]
+        .none
+  eprintlist.findSome? checkEprint <|> .some
+    (if eprint.toLower.startsWith "http" then
+      -- unrecognized eprint type but starts with "http"
+      mkUrl eprint
+    else
+      -- unrecognized eprint type, cannot add link to it
+      #[.Character (eprinttype ++ ":" ++ eprint)])
+
+def formatWebRefs : Array Content :=
+  let formatUrl : Option (Array Content) :=
+    mkUrl <$> TexContent.toPlaintextArray <$> e.tags.find? "url"
+  let formatWebRef (tagName urlPrefix namePrefix : String) : Option (Array Content) :=
+    mkWebRef urlPrefix namePrefix <$> TexContent.toPlaintextArray <$> e.tags.find? tagName
   sentence #[
-    formatUrl' "pubmed" "https://www.ncbi.nlm.nih.gov/pubmed/" "PMID:",
-    formatUrl' "doi" "https://doi.org/" "doi:",
-    formatUrl' "eprint" "https://arxiv.org/abs/" "arXiv:",
+    formatWebRef "pubmed" "https://www.ncbi.nlm.nih.gov/pubmed/" "PMID:",
+    formatWebRef "doi" "https://doi.org/" "doi:",
+    formatEprint e,
     formatUrl
   ]
 
