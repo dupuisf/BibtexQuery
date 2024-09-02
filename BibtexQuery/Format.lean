@@ -297,6 +297,8 @@ def formatWebRefs : Array Content :=
   sentence #[
     formatWebRef "pubmed" "https://www.ncbi.nlm.nih.gov/pubmed/" "PMID:",
     formatWebRef "doi" "https://doi.org/" "doi:",
+    formatWebRef "mrnumber" "https://www.ams.org/mathscinet-getitem?mr=MR" "MR:",
+    formatWebRef "zbl" "https://zbmath.org/?q=an:" "Zbl:",
     formatEprint e,
     formatUrl
   ]
