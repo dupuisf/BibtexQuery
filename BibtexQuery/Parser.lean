@@ -6,6 +6,8 @@ Author: Frédéric Dupuis
 
 import BibtexQuery.ParsecExtra
 import BibtexQuery.Entry
+import Std.Internal.Parsec
+import Std.Internal.Parsec.String
 
 /-!
 # Bibtex Parser
@@ -15,21 +17,21 @@ Bibtex format is supported; features such as predefined strings and concatenatio
 supported.
 -/
 
-open Lean Parsec BibtexQuery.ParsecExtra
+open Lean Std.Internal.Parsec Std.Internal.Parsec.String BibtexQuery.ParsecExtra
 
 namespace BibtexQuery.Parser
 
 /-- The name of the bibtex entry (i.e. what goes in the cite command). -/
-def name : Parsec String := attempt do
-  let firstChar ← Parsec.asciiLetter
+def name : Parser String := attempt do
+  let firstChar ← asciiLetter
   let remainder ← manyChars <| (alphaNum <|> pchar ':' <|> pchar '-' <|> pchar '_')
   return firstChar.toString ++ remainder
 
 /-- "article", "book", etc -/
-def category : Parsec String := attempt do skipChar '@'; asciiWordToLower
+def category : Parser String := attempt do skipChar '@'; asciiWordToLower
 
-partial def bracedContentTail (acc : String) : Parsec String := attempt do
-  let c ← anyChar
+partial def bracedContentTail (acc : String) : Parser String := attempt do
+  let c ← any
   if c = '{' then
     let s ← bracedContentTail ""
     bracedContentTail (acc ++ "{" ++ s)
@@ -38,18 +40,18 @@ partial def bracedContentTail (acc : String) : Parsec String := attempt do
     else
       bracedContentTail (acc ++ c.toString)
 
-def bracedContent : Parsec String := attempt do
+def bracedContent : Parser String := attempt do
   skipChar '{'
   let s ← bracedContentTail ""
   return s.dropRight 1
 
-def quotedContent : Parsec String := attempt do
+def quotedContent : Parser String := attempt do
   skipChar '"'
   let s ← manyCharsUntilWithPrev fun | (some '\\'), '"' => false | _, '"' => true | _, _ => false
   skipChar '"'
   return (s.replace "\n" "").replace "\r" ""
 
-def month : Parsec String := attempt do
+def month : Parser String := attempt do
   let s ← asciiWordToLower
   match s with
   | "jan" => return s
@@ -67,7 +69,7 @@ def month : Parsec String := attempt do
   | _     => fail "Not a valid month"
 
 /-- The content field of a tag. -/
-def tagContent : Parsec String := attempt do
+def tagContent : Parser String := attempt do
   let c ← peek!
   if c.isDigit then manyChars digit else
     if c.isAlpha then month else
@@ -77,17 +79,17 @@ def tagContent : Parsec String := attempt do
       | _   => fail "Tag content expected"
 
 /-- i.e. journal = {Journal of Musical Deontology} -/
-def tag : Parsec Tag := attempt do
+def tag : Parser Tag := attempt do
   let tagName ← manyChars (alphaNumToLower <|> pchar '_' <|> pchar '-')
   ws; skipChar '='; ws
   let tagContent ← tagContent
   return { name := tagName, content := tagContent }
 
-def outsideEntry : Parsec Unit := attempt do
+def outsideEntry : Parser Unit := attempt do
   let _ ← manyChars <| noneOf "@"
 
 /-- A Bibtex entry. TODO deal with "preamble" etc. -/
-def entry : Parsec Entry := attempt do
+def entry : Parser Entry := attempt do
   outsideEntry
   let typeOfEntry ← category
   ws; skipChar '{'; ws
@@ -97,7 +99,7 @@ def entry : Parsec Entry := attempt do
   ws; skipChar '}'; ws
   return Entry.normalType typeOfEntry nom t
 
-def bibtexFile : Parsec (List Entry) := many' entry
+def bibtexFile : Parser (List Entry) := many' entry
 
 --#eval "auTHOr23:z  ".parseDebug name
 --#eval "auTHOr23:z".parseDebug name

@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Jz Pan
 -/
 
-import Lean.Data.Parsec
+import Std.Internal.Parsec
+import Std.Internal.Parsec.String
 
 /-!
 
@@ -17,16 +18,16 @@ and error on any other TeX commands which are not in math environment.
 
 -/
 
-open Lean Parsec
+open Lean Std.Internal.Parsec Std.Internal.Parsec.String
 
 namespace BibtexQuery.TexDiacritics
 
 /-- Match a sequence of space characters and return it. -/
-def ws' : Parsec String :=  manyChars <| satisfy fun c =>
+def ws' : Parser String :=  manyChars <| satisfy fun c =>
   c == ' ' || c == '\n' || c == '\r' || c == '\t'
 
 /-- Match a normal character which is not the beginning of TeX command. -/
-def normalChar : Parsec Char := satisfy fun c =>
+def normalChar : Parser Char := satisfy fun c =>
   c != '\\' && c != '$' && c != '{' && c != '}'
 
 /-- Replace certain sequences (e.g. "--") by their UTF-8 representations. -/
@@ -41,15 +42,15 @@ def replaceChars (s : String) : String :=
   arr.foldl (fun acc (o, r) => acc.replace o r) s
 
 /-- Match at least one normal characters which is not the beginning of TeX command. -/
-def normalChars : Parsec String := do
+def normalChars : Parser String := do
   let s ← many1Chars normalChar
   pure <| replaceChars s
 
 /-- Match a TeX command starting with `\`, potentially with trailing whitespaces. -/
-def texCommand : Parsec String := pchar '\\' *> attempt do
+def texCommand : Parser String := pchar '\\' *> attempt do
   let s ← manyChars asciiLetter
   if s.isEmpty then
-    return "\\" ++ toString (← anyChar) ++ (← ws')
+    return "\\" ++ toString (← any) ++ (← ws')
   else
     match ← peek? with
     | .some c =>
@@ -63,22 +64,22 @@ def texCommand : Parsec String := pchar '\\' *> attempt do
       return "\\" ++ s
 
 /-- Similar to `texCommand` but it excludes some commands. -/
-def texCommand' (exclude : Array String) : Parsec String := attempt do
+def texCommand' (exclude : Array String) : Parser String := attempt do
   let s ← texCommand
   match exclude.find? (· == s.trim) with
   | .some _ => fail s!"'{s.trim}' is not allowed"
   | .none => return s
 
 /-- Match a sequence starting with `{` and ending with `}`. -/
-def bracedContent (p : Parsec String) : Parsec String :=
+def bracedContent (p : Parser String) : Parser String :=
   pchar '{' *> (("{" ++ · ++ "}") <$> p) <* pchar '}'
 
 /-- Similar to `bracedContent` but it does not output braces. -/
-def bracedContent' (p : Parsec String) : Parsec String :=
+def bracedContent' (p : Parser String) : Parser String :=
   pchar '{' *> p <* pchar '}'
 
-partial def manyOptions {α} (p : Parsec (Option α)) (acc : Array α := #[]) :
-    Parsec (Array α) := fun it =>
+partial def manyOptions {α} (p : Parser (Option α)) (acc : Array α := #[]) :
+    Parser (Array α) := fun it =>
   match p it with
   | .success it ret =>
     match ret with
@@ -86,8 +87,8 @@ partial def manyOptions {α} (p : Parsec (Option α)) (acc : Array α := #[]) :
     | .none => .success it acc
   | .error it err => .error it err
 
-partial def mathContentAux : Parsec String := do
-  let doOne : Parsec (Option String) := fun it =>
+partial def mathContentAux : Parser String := do
+  let doOne : Parser (Option String) := fun it =>
     if it.hasNext then
       match it.curr with
       | '{' => (.some <$> bracedContent mathContentAux) it
@@ -102,8 +103,8 @@ partial def mathContentAux : Parsec String := do
   return String.join (← manyOptions doOne).toList
 
 /-- Match a math content. Returns `Option.none` if it does not start with `\(`, `\[` or `$`. -/
-def mathContent : Parsec (Option String) := fun it =>
-  let aux (beginning ending dollar : String) : Parsec String :=
+def mathContent : Parser (Option String) := fun it =>
+  let aux (beginning ending dollar : String) : Parser String :=
     pstring beginning *> ((dollar ++ · ++ dollar) <$> mathContentAux) <* pstring ending
   let substr := it.extract (it.forward 2)
   if substr = "\\[" then
@@ -120,7 +121,7 @@ def mathContent : Parsec (Option String) := fun it =>
 /-- Match a TeX command for diacritics, return the corresponding UTF-8 string.
 Sometimes it needs to read the character after the command,
 in this case the `p` is used to read braced content. -/
-def texDiacriticsCommand (p : Parsec String) : Parsec String := do
+def texDiacriticsCommand (p : Parser String) : Parser String := do
   let cmd ← String.trim <$> texCommand
   match cmd with
   | "\\oe" => pure "œ" | "\\OE" => pure "Œ"
@@ -147,7 +148,7 @@ def texDiacriticsCommand (p : Parsec String) : Parsec String := do
     if ch.isEmpty then
       fail s!"unsupported command: '{cmd}'"
     else
-      let doOne : Parsec String := fun it =>
+      let doOne : Parser String := fun it =>
         if it.hasNext then
           match it.curr with
           | '{' => bracedContent p it
@@ -168,8 +169,8 @@ def texDiacriticsCommand (p : Parsec String) : Parsec String := do
 
 /-- Convert all TeX commands for diacritics into UTF-8 characters,
 and error on any other TeX commands which are not in math environment. -/
-partial def texDiacritics : Parsec String := do
-  let doOne : Parsec (Option String) := fun it =>
+partial def texDiacritics : Parser String := do
+  let doOne : Parser (Option String) := fun it =>
     if it.hasNext then
       match mathContent it with
       | .success it ret =>
@@ -188,8 +189,8 @@ partial def texDiacritics : Parsec String := do
 
 /-- Remove all braces except for those in math environment,
 and error on any TeX commands which are not in math environment. -/
-partial def removeBraces : Parsec String := do
-  let doOne : Parsec (Option String) := fun it =>
+partial def removeBraces : Parser String := do
+  let doOne : Parser (Option String) := fun it =>
     if it.hasNext then
       match mathContent it with
       | .success it ret =>
