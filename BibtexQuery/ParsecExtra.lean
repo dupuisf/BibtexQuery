@@ -4,7 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Frédéric Dupuis
 -/
 
-import Lean.Data.Parsec
+import Std.Internal.Parsec
+import Std.Internal.Parsec.Basic
+import Std.Internal.Parsec.String
+
+
 
 /-!
 # Extra Parsec material
@@ -14,98 +18,98 @@ of which is modelled after its Haskell counterpart.
 -/
 
 
-open Lean Lean.Parsec
+open Lean Std.Internal.Parsec.String Std.Internal.Parsec
 
 namespace BibtexQuery.ParsecExtra
 
-def _root_.String.parse? [Inhabited α] (s : String) (p : Lean.Parsec α) : Option α :=
+def _root_.String.parse? [Inhabited α] (s : String) (p : Parser α) : Option α :=
   match p s.iter with
-  | Lean.Parsec.ParseResult.success _ x => some x
-  | Lean.Parsec.ParseResult.error _ _ => none
+  | .success _ x => some x
+  | .error _ _ => none
 
-def _root_.String.parseDebug [Inhabited α] (s : String) (p : Lean.Parsec α) : Option (α × String.Pos) :=
+def _root_.String.parseDebug [Inhabited α] (s : String) (p : Parser α) : Option (α × String.Pos) :=
   match p s.iter with
-  | Lean.Parsec.ParseResult.success pos x => some ⟨x, pos.i⟩
-  | Lean.Parsec.ParseResult.error _ _ => none
+  | .success pos x => some ⟨x, pos.i⟩
+  | .error _ _ => none
 
 @[inline]
-def noneOf (bad : String) : Parsec Char := Parsec.satisfy (fun z => ¬bad.contains z)
+def noneOf (bad : String) : Parser Char := satisfy (fun z => ¬bad.contains z)
 
 @[inline]
-def noneOfStr (bad : String) : Parsec String := manyChars (noneOf bad)
+def noneOfStr (bad : String) : Parser String := manyChars (noneOf bad)
 
 @[inline]
-def eol : Parsec String :=
-  Parsec.pstring "\n\r" <|> Parsec.pstring "\r\n" <|> Parsec.pstring "\n"
+def eol : ByteArray.Parser String :=
+  ByteArray.pstring "\n\r" <|> ByteArray.pstring "\r\n" <|> ByteArray.pstring "\n"
 
 @[inline]
-def maybeSkip (p : Parsec α) : Parsec Unit := (attempt (p *> pure ())) <|> pure ()
+def maybeSkip (p : Parser α) : Parser Unit := (attempt (p *> pure ())) <|> pure ()
 
 @[inline]
-partial def manyCore' (p : Parsec α) (acc : List α) : Parsec (List α) :=
+partial def manyCore' (p : Parser α) (acc : List α) : Parser (List α) :=
   (do manyCore' p (acc ++ [← p])) <|> pure acc
 
 @[inline]
-def many' (p : Parsec α) : Parsec (List α) := manyCore' p []
+def many' (p : Parser α) : Parser (List α) := manyCore' p []
 
 @[inline]
-partial def manyStrCore (p : Parsec String) (acc : String) : Parsec String :=
+partial def manyStrCore (p : Parser String) (acc : String) : Parser String :=
   (do manyStrCore p (acc ++ (← p))) <|> pure acc
 
 @[inline]
-def manyStr (p : Parsec String) : Parsec String := manyStrCore p ""
+def manyStr (p : Parser String) : Parser String := manyStrCore p ""
 
 @[inline]
-partial def sepByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
-    Parsec (List α) :=
+partial def sepByCore (pcont : Parser α) (psep : Parser β) (acc : List α) :
+    Parser (List α) :=
   attempt (do let _ ← psep; sepByCore pcont psep (acc ++ [← pcont])) <|> pure acc
 
 @[inline]
-def sepBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
+def sepBy (pcont : Parser α) (psep : Parser β) : Parser (List α) :=
   (do sepByCore pcont psep [← pcont]) <|> pure []
 
 @[inline]
-def sepOrEndBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
+def sepOrEndBy (pcont : Parser α) (psep : Parser β) : Parser (List α) :=
   (do let output ← sepByCore pcont psep [← pcont]; maybeSkip psep; return output) <|> pure []
 
 @[inline]
-partial def endByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
-    Parsec (List α) :=
+partial def endByCore (pcont : Parser α) (psep : Parser β) (acc : List α) :
+    Parser (List α) :=
   attempt (do let x ← pcont; let _ ← psep; endByCore pcont psep (acc ++ [x])) <|> pure acc
 
 @[inline]
-def endBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
+def endBy (pcont : Parser α) (psep : Parser β) : Parser (List α) :=
   (do endByCore pcont psep []) <|> pure []
 
 @[inline]
-def alphaNum : Parsec Char := attempt do
-  let c ← anyChar
+def alphaNum : Parser Char := attempt do
+  let c ← any
   if ('A' ≤ c ∧ c ≤ 'Z') ∨ ('a' ≤ c ∧ c ≤ 'z') ∨ ('0' ≤ c ∧ c ≤ '9') then
     return c
   else fail s!"ASCII alphanumeric character expected"
 
 @[inline]
-def asciiLetterToLower : Parsec Char := return (← asciiLetter).toLower
+def asciiLetterToLower : Parser Char := return (← asciiLetter).toLower
 
 @[inline]
-def alphaNumToLower : Parsec Char := return (← alphaNum).toLower
+def alphaNumToLower : Parser Char := return (← alphaNum).toLower
 
 @[inline]
-def asciiWordToLower : Parsec String := manyChars asciiLetterToLower
+def asciiWordToLower : Parser String := manyChars asciiLetterToLower
 
 @[inline]
-def between (op : Parsec α) (cl : Parsec α) (mid : Parsec β) : Parsec β := attempt do
+def between (op : Parser α) (cl : Parser α) (mid : Parser β) : Parser β := attempt do
   let _ ← op
   let s ← mid
   let _ ← cl
   return s
 
 @[inline]
-def natNum : Parsec Nat := attempt do
+def natNum : Parser Nat := attempt do
   let some n := (← manyChars digit).toNat? | fail "Not a natural number"
   return n
 
-def manyCharsUntilWithPrev (test : Option Char → Char → Bool) : Parsec String := fun it =>
+def manyCharsUntilWithPrev (test : Option Char → Char → Bool) : Parser String := fun it =>
   let out :=
     it.foldUntil "" fun acc c =>
       let prev : Option Char := if acc == "" then none else acc.back

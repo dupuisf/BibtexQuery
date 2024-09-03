@@ -8,6 +8,8 @@ import BibtexQuery.Name
 import BibtexQuery.Entry
 import Lean.Data.Xml.Basic
 import Lean.Data.HashMap
+import Std.Internal.Parsec
+import Std.Internal.Parsec.String
 
 /-!
 
@@ -18,7 +20,7 @@ tag generating and sorting.
 
 -/
 
-open Lean Xml Parsec Unicode BibtexQuery.TexDiacritics BibtexQuery.Name
+open Lean Xml Std.Internal.Parsec Unicode BibtexQuery.TexDiacritics BibtexQuery.Name
 
 namespace BibtexQuery
 

@@ -6,6 +6,9 @@ Author: Jz Pan
 
 import BibtexQuery.TexDiacritics
 import UnicodeBasic
+import Std.Internal.Parsec
+import Std.Internal.Parsec.String
+
 
 /-!
 
@@ -21,12 +24,12 @@ The math equations are still not allowed.
 
 -/
 
-open Lean Parsec Unicode BibtexQuery.TexDiacritics
+open Lean Std.Internal.Parsec Std.Internal.Parsec.String Unicode BibtexQuery.TexDiacritics
 
 namespace BibtexQuery.Name
 
-partial def getNameBracedAux : Parsec String := do
-  let doOne : Parsec (Option String) := fun it =>
+partial def getNameBracedAux : Parser String := do
+  let doOne : Parser (Option String) := fun it =>
     if it.hasNext then
       match it.curr with
       | '{' => (.some <$> bracedContent getNameBracedAux) it
@@ -36,19 +39,19 @@ partial def getNameBracedAux : Parsec String := do
       .success it .none
   return String.join (← manyOptions doOne).toList
 
-def normalCharWithoutSpaceOrComma : Parsec Char := satisfy fun c =>
+def normalCharWithoutSpaceOrComma : Parser Char := satisfy fun c =>
   match c with
   | '\\' | '$' | '{' | '}' | ' ' | '\t' | '\r' | '\n' | ',' => false
   | _ => true
 
-def normalCharsWithoutSpaceOrComma : Parsec String := do
+def normalCharsWithoutSpaceOrComma : Parser String := do
   let s ← many1Chars normalCharWithoutSpaceOrComma
   pure <| replaceChars s
 
 /-- Input a bibtex name string without TeX commands
 and math equations, split the string by " " and ",". -/
-def getNameAux : Parsec (Array String) := do
-  let doOne' : Parsec (Option String) := fun it =>
+def getNameAux : Parser (Array String) := do
+  let doOne' : Parser (Option String) := fun it =>
     if it.hasNext then
       match it.curr with
       | '{' => (.some <$> bracedContent getNameBracedAux) it
@@ -56,7 +59,7 @@ def getNameAux : Parsec (Array String) := do
       | _ => (.some <$> normalCharsWithoutSpaceOrComma) it
     else
       .success it .none
-  let doOne : Parsec (Option String) := fun it =>
+  let doOne : Parser (Option String) := fun it =>
     if it.hasNext then
       match it.curr with
       | '}' => .success it .none
@@ -106,7 +109,7 @@ def getName (arr : Array String) : String × String :=
 /-- Input a bibtex name string without TeX commands
 and math equations, return an array of `(Firstname, Lastname)`.
 The braces in the name are preserevd. -/
-def getNames : Parsec (Array (String × String)) := do
+def getNames : Parser (Array (String × String)) := do
   let arr ← getNameAux
   let arr2 : Array (Array String) := arr.foldl (fun acc s =>
     if s = "and" then

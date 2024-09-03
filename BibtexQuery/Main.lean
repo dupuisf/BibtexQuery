@@ -100,23 +100,23 @@ def main : List String → IO Unit
     IO.println s!"Reading {fname} to find doubled keys"
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
-    | Parsec.ParseResult.success _pos res =>
+    | .success _pos res =>
       let lst := listDoublons res
       IO.println lst
-    | Parsec.ParseResult.error pos err => IO.eprintln s!"Parse error at line {pos.lineNumber}: {err}"
+    | .error pos err => IO.eprintln s!"Parse error at line {pos.lineNumber}: {err}"
   | ["l", fname]    => do
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
-    | Parsec.ParseResult.success _pos res => printEntries res
-    | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
+    | .success _pos res => printEntries res
+    | .error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
   | "q" :: (fname :: queries) => do
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
-    | Parsec.ParseResult.success _pos res => printMatchingEntries res $ queries.filterMap Query.ofString
-    | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
+    | .success _pos res => printMatchingEntries res $ queries.filterMap Query.ofString
+    | .error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
   | "c" :: (fname :: queries) => do
     let parsed := BibtexQuery.Parser.bibtexFile (←IO.FS.readFile fname).iter
     match parsed with
-    | Parsec.ParseResult.success _pos res => printMatchingCitations res $ queries.filterMap Query.ofString
-    | Parsec.ParseResult.error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
+    | .success _pos res => printMatchingCitations res $ queries.filterMap Query.ofString
+    | .error pos err => IO.eprint s!"Parse error at line {pos.lineNumber}: {err}"
   | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
