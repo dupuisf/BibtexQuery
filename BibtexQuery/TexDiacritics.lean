@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Jz Pan
 -/
 
-import Lean.Data.Parsec
+import Std.Internal.Parsec
+import Std.Internal.Parsec.String
 import Lean.Data.Xml.Basic
 import UnicodeBasic
 
@@ -19,7 +20,7 @@ and preserve other TeX commands.
 
 -/
 
-open Lean Xml Parsec Unicode
+open Lean Xml Std.Internal.Parsec Std.Internal.Parsec.String Unicode
 
 namespace BibtexQuery.TexDiacritics
 
@@ -197,7 +198,7 @@ end
 end TexContent
 
 /-- Match a sequence of space characters and return it. -/
-def ws' : Parsec String := manyChars <| satisfy fun
+def ws' : Parser String := manyChars <| satisfy fun
   | ' ' | '\t' | '\r' | '\n' => true
   | _ => false
 
@@ -213,11 +214,11 @@ def replaceChars (s : String) : String :=
   arr.foldl (fun acc (o, r) => acc.replace o r) s
 
 /-- Match a TeX command starting with `\`, potentially with trailing whitespaces. -/
-def texCommand : Parsec String := pchar '\\' *> attempt do
+def texCommand : Parser String := pchar '\\' *> attempt do
   let s ← manyChars asciiLetter
   if s.isEmpty then
     -- some commands preserve trailing whitespaces
-    let c ← anyChar
+    let c ← any
     match c with
     | '&' | '#' | '{' | '}' | '$' | '_' => return "\\" ++ toString c
     | _ => return "\\" ++ toString c ++ (← ws')
@@ -228,18 +229,18 @@ def texCommand : Parsec String := pchar '\\' *> attempt do
     return "\\" ++ s ++ (← ws')
 
 /-- Similar to `texCommand` but it excludes some commands. -/
-def texCommand' (exclude : Array String) : Parsec String := attempt do
+def texCommand' (exclude : Array String) : Parser String := attempt do
   let s ← texCommand
   match exclude.find? (· == s.trim) with
   | .some _ => fail s!"'{s.trim}' is not allowed"
   | .none => return s
 
 /-- Match a sequence starting with `{` and ending with `}`. -/
-def bracedContent (p : Parsec String) : Parsec String :=
+def bracedContent (p : Parser String) : Parser String :=
   pchar '{' *> (("{" ++ · ++ "}") <$> p) <* pchar '}'
 
-partial def manyOptions {α} (p : Parsec (Option α)) (acc : Array α := #[]) :
-    Parsec (Array α) := fun it =>
+partial def manyOptions {α} (p : Parser (Option α)) (acc : Array α := #[]) :
+    Parser (Array α) := fun it =>
   match p it with
   | .success it ret =>
     match ret with
@@ -247,11 +248,11 @@ partial def manyOptions {α} (p : Parsec (Option α)) (acc : Array α := #[]) :
     | .none => .success it acc
   | .error it err => .error it err
 
-partial def mathContentAux : Parsec String := do
-  let normalChars : Parsec String := many1Chars <| satisfy fun
+partial def mathContentAux : Parser String := do
+  let normalChars : Parser String := many1Chars <| satisfy fun
     | '\\' | '$' | '{' | '}' => false
     | _ => true
-  let doOne : Parsec (Option String) := fun it =>
+  let doOne : Parser (Option String) := fun it =>
     if it.hasNext then
       match it.curr with
       | '{' => (.some <$> bracedContent mathContentAux) it
@@ -266,8 +267,8 @@ partial def mathContentAux : Parsec String := do
   return String.join (← manyOptions doOne).toList
 
 /-- Match a math content. Returns `Option.none` if it does not start with `\(`, `\[` or `$`. -/
-def mathContent : Parsec (Option TexContent) := fun it =>
-  let aux (beginning ending : String) : Parsec String :=
+def mathContent : Parser (Option TexContent) := fun it =>
+  let aux (beginning ending : String) : Parser String :=
     pstring beginning *> mathContentAux <* pstring ending
   let substr := it.extract (it.forward 2)
   if substr = "\\[" then
@@ -281,11 +282,11 @@ def mathContent : Parsec (Option TexContent) := fun it =>
   else
     .success it .none
 
-partial def rawContentAux : Parsec String := do
-  let normalChars : Parsec String := many1Chars <| satisfy fun
+partial def rawContentAux : Parser String := do
+  let normalChars : Parser String := many1Chars <| satisfy fun
     | '\\' | '{' | '}' => false
     | _ => true
-  let doOne : Parsec (Option String) := fun it =>
+  let doOne : Parser (Option String) := fun it =>
     if it.hasNext then
       match it.curr with
       | '{' => (.some <$> bracedContent rawContentAux) it
@@ -298,7 +299,7 @@ partial def rawContentAux : Parsec String := do
 
 /-- Match a TeX command for diacritics, return the processed TeX contents.
 Sometimes it needs to read the contents after the command, in this case the `p` is used. -/
-def texDiacriticsCommand (p : Parsec (Option TexContent)) : Parsec (Option TexContent) := do
+def texDiacriticsCommand (p : Parser (Option TexContent)) : Parser (Option TexContent) := do
   let cmd ← texCommand
   -- some special commands
   if cmd.trim = "\\url" then
@@ -348,8 +349,8 @@ def texDiacriticsCommand (p : Parsec (Option TexContent)) : Parsec (Option TexCo
 The TeX commands for diacritics will be converted into UTF-8 characters.
 Other TeX commands are preserved.
 Returns `Option.none` if it can't match any and there are no errors. -/
-partial def texContent : Parsec (Option TexContent) := fun it =>
-  let normalChars' : Parsec String := many1Chars <| satisfy fun
+partial def texContent : Parser (Option TexContent) := fun it =>
+  let normalChars' : Parser String := many1Chars <| satisfy fun
     | '\\' | '$' | '{' | '}' | ' ' | '\t' | '\r' | '\n' | ',' => false
     | _ => true
   match mathContent it with
@@ -370,6 +371,6 @@ partial def texContent : Parsec (Option TexContent) := fun it =>
   | .error it err => .error it err
 
 /-- Match a sequence of TeX contents. -/
-def texContents : Parsec (Array TexContent) := manyOptions texContent
+def texContents : Parser (Array TexContent) := manyOptions texContent
 
 end BibtexQuery.TexDiacritics

@@ -6,6 +6,9 @@ Author: Jz Pan
 
 import BibtexQuery.TexDiacritics
 import UnicodeBasic
+import Std.Internal.Parsec
+import Std.Internal.Parsec.String
+
 
 /-!
 
@@ -84,7 +87,7 @@ def stripDiacritics (c : Char) : Char :=
   | '\u00DF' => 's' | '\u1E9E' => 'S'
   | _ =>
     let s := getCanonicalDecomposition c
-    s.get? (s.find fun c => (getUnicodeData c).canonicalCombiningClass == 0) |>.getD c
+    s.get? (s.find fun c => getCanonicalCombiningClass c == 0) |>.getD c
 
 /-- Strip diacritics from a string. -/
 def stripDiacriticsFromString (s : String) : String :=
