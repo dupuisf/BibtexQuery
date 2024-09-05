@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Frédéric Dupuis
 -/
 
+-- Just a dummy comment -- please delete
+
 import Lean.Data.HashMap
 import BibtexQuery.Parser
 import BibtexQuery.String
