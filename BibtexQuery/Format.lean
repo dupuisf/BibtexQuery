@@ -31,7 +31,7 @@ structure ProcessedEntry where
   /-- The name, or called citekey, of a bibtex entry. -/
   name : String
   /-- The tags of a bibtex entry, stored as a `HashMap`. Don't be confused with `tag`. -/
-  tags : HashMap String String
+  tags : Std.HashMap String String
   /-- The tag of a bibtex entry, e.g. `[Doe12]`. Don't be confused with `tags`. -/
   tag : String
   /-- The HTML representing a bibtex entry, e.g.
@@ -70,12 +70,12 @@ def authorsToString (authors : Array BibtexName) : String :=
   ", ".intercalate arr.toList
 
 /-- Get the date (which is `year * 100 + month`) and the date string of a bibitem. -/
-def getDate (tags : HashMap String String) : Nat × String :=
-  if let .some yearStr := tags.find? "year" then
+def getDate (tags : Std.HashMap String String) : Nat × String :=
+  if let .some yearStr := tags["year"]? then
     let yearStr := yearStr.trim
     if let .some year := yearStr.toList.filter Char.isDigit |> String.mk |>.toNat? then
       let month : Nat :=
-        if let .some monthStr := tags.find? "month" then
+        if let .some monthStr := tags["month"]? then
           let monthStr := monthStr.trim.toLower
           match monthStr with
           | "jan" => 1 | "feb" => 2 | "mar" => 3
@@ -127,9 +127,9 @@ def ProcessedEntry.ofEntry (e : Entry) : Except String (Option ProcessedEntry) :
           | .success _ s => pure (x.name, removeDuplicatedSpaces s)
           | .error it err => .error s!"failed to run removeBraces on '{it.1}' at pos {it.2}: {err}"
         | .error it err => .error s!"failed to run texDiacritics on '{it.1}' at pos {it.2}: {err}"
-    let tags := HashMap.ofList lst
-    let authors ← processNames (tags.findD "author" "")
-    let editors ← processNames (tags.findD "editor" "")
+    let tags := Std.HashMap.ofList lst
+    let authors ← processNames (tags.getD "author" "")
+    let editors ← processNames (tags.getD "editor" "")
     let authorOrEditor := if authors.isEmpty then editors else authors
     let (date, dateStr) := getDate tags
     pure <| .some {
@@ -149,7 +149,7 @@ def ProcessedEntry.ofEntry (e : Entry) : Except String (Option ProcessedEntry) :
           ""
       date := date
       dateStr := dateStr
-      titleWithoutDiacritics := stripDiacriticsFromString (tags.findD "title" "") |>.map getUpperChar
+      titleWithoutDiacritics := stripDiacriticsFromString (tags.getD "title" "") |>.map getUpperChar
     }
   | _ => pure .none
 
@@ -239,22 +239,22 @@ def toplevel (arr : Array (Option (Array Content))) : Array Content :=
   arrayConcat arr #[.Character "\n"]
 
 def formatVolumeAndPages : Option (Array Content) := do
-  let pages ← e.tags.find? "pages"
-  match e.tags.find? "volume" with
+  let pages ← e.tags["pages"]?
+  match e.tags["volume"]? with
   | .some volume =>
     arrayConcat #[
       mkStr' volume,
-      (mkStr · "(" ")") <$> e.tags.find? "number",
+      (mkStr · "(" ")") <$> e.tags["number"]?,
       mkStr' pages ":"
     ]
   | .none => mkStr' pages "pages "
 
 def formatWebRefs : Option (Array Content) :=
   let formatUrl : Option (Array Content) := do
-    let s ← e.tags.find? "url"
+    let s ← e.tags["url"]?
     pure <| if s.isEmpty then #[] else #[.Character "URL: ", mkHref s s]
   let formatUrl' (tagName urlPrefix namePrefix : String) : Option (Array Content) := do
-    let s ← e.tags.find? tagName
+    let s ← e.tags[tagName]?
     pure <| mkHref' (urlPrefix ++ s) (namePrefix ++ s)
   sentence #[
     formatUrl' "pubmed" "https://www.ncbi.nlm.nih.gov/pubmed/" "PMID:",
@@ -267,14 +267,14 @@ def formatAuthorOrEditor : Option (Array Content) :=
   sentence' (if e.authorStr.isEmpty then e.editorStr else e.authorStr)
 
 def formatVolumeAndSeries (asSentence : Bool) : Option (Array Content) :=
-  let series := e.tags.find? "series"
+  let series := e.tags["series"]?
   let arr : Array Content :=
-    if let .some volume := e.tags.find? "volume" then
+    if let .some volume := e.tags["volume"]? then
       arrayConcat #[
         mkStr' volume (if asSentence then "Volume " else "volume "),
         (mkStr · " of ") <$> series
       ]
-    else if let .some number := e.tags.find? "number" then
+    else if let .some number := e.tags["number"]? then
       arrayConcat #[
         mkStr' number (if asSentence then "Number " else "number "),
         (mkStr · " in ") <$> series
@@ -289,22 +289,22 @@ def formatVolumeAndSeries (asSentence : Bool) : Option (Array Content) :=
 def formatChapterAndPages : Option (Array Content) :=
   let arr : Array Content :=
     arrayConcat #[
-      (mkStr · "chapter ") <$> e.tags.find? "chapter",
-      (mkStr · "pages ") <$> e.tags.find? "pages"
+      (mkStr · "chapter ") <$> e.tags["chapter"]?,
+      (mkStr · "pages ") <$> e.tags["pages"]?
     ] #[.Character ", "]
   if arr.isEmpty then .none else .some arr
 
 def formatEdition : Option (Array Content) :=
-  (mkStr · "" " edition") <$> e.tags.find? "edition"
+  (mkStr · "" " edition") <$> e.tags["edition"]?
 
 def formatAddressOrganizationPublisherDate (includeOrganization : Bool) :
     Option (Array Content) :=
   let organization : Option (Array Content) :=
     if includeOrganization then
-      mkStr <$> e.tags.find? "organization"
+      mkStr <$> e.tags["organization"]?
     else
       .none
-  if let .some address := e.tags.find? "address" then
+  if let .some address := e.tags["address"]? then
     words #[
       sentence #[
         mkStr' address,
@@ -312,18 +312,18 @@ def formatAddressOrganizationPublisherDate (includeOrganization : Bool) :
       ],
       sentence #[
         organization,
-        mkStr <$> e.tags.find? "publisher"
+        mkStr <$> e.tags["publisher"]?
       ]
     ]
   else
     sentence #[
       organization,
-      mkStr <$> e.tags.find? "publisher",
+      mkStr <$> e.tags["publisher"]?,
       mkStr' e.dateStr
     ]
 
 def formatISBN : Option (Array Content) :=
-  (sentence' <| "ISBN " ++ ·) <$> e.tags.find? "isbn"
+  (sentence' <| "ISBN " ++ ·) <$> e.tags["isbn"]?
 
 /-!
 
@@ -334,42 +334,42 @@ def formatISBN : Option (Array Content) :=
 def formatArticle : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
-      mkTag' "i" <$> e.tags.find? "journal",
+      mkTag' "i" <$> e.tags["journal"]?,
       formatVolumeAndPages e,
       mkStr' e.dateStr
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatBook : Array Content :=
   toplevel #[
     formatAuthorOrEditor e,
-    sentence #[mkTag' "i" <$> e.tags.find? "title"],
+    sentence #[mkTag' "i" <$> e.tags["title"]?],
     formatVolumeAndSeries e true,
     sentence #[
-      mkStr <$> e.tags.find? "publisher",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["publisher"]?,
+      mkStr <$> e.tags["address"]?,
       formatEdition e,
       mkStr' e.dateStr
     ],
     formatISBN e,
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatBooklet : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     formatVolumeAndSeries e true,
     sentence #[
-      mkStr <$> e.tags.find? "howpublished",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["howpublished"]?,
+      mkStr <$> e.tags["address"]?,
       mkStr' e.dateStr,
-      mkStr <$> e.tags.find? "note"
+      mkStr <$> e.tags["note"]?
     ],
     formatWebRefs e
   ]
@@ -378,16 +378,16 @@ def formatInBook : Array Content :=
   toplevel #[
     formatAuthorOrEditor e,
     sentence #[
-      mkTag' "i" <$> e.tags.find? "title",
+      mkTag' "i" <$> e.tags["title"]?,
       formatChapterAndPages e
     ],
     formatVolumeAndSeries e true,
     sentence #[
-      mkStr <$> e.tags.find? "publisher",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["publisher"]?,
+      mkStr <$> e.tags["address"]?,
       formatEdition e,
       mkStr' e.dateStr,
-      mkStr <$> e.tags.find? "note"
+      mkStr <$> e.tags["note"]?
     ],
     formatWebRefs e
   ]
@@ -395,16 +395,16 @@ def formatInBook : Array Content :=
 def formatInCollection : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     (fun x => #[.Character "In "] ++ x) <$> sentence #[
       mkStr' e.editorStr,
-      mkTag' "i" <$> e.tags.find? "booktitle",
+      mkTag' "i" <$> e.tags["booktitle"]?,
       formatVolumeAndSeries e false,
       formatChapterAndPages e
     ],
     sentence #[
-      mkStr <$> e.tags.find? "publisher",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["publisher"]?,
+      mkStr <$> e.tags["address"]?,
       formatEdition e,
       mkStr' e.dateStr
     ],
@@ -414,71 +414,71 @@ def formatInCollection : Array Content :=
 def formatInProceedings : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     (fun x => #[.Character "In "] ++ x) <$> words #[
       sentence #[
         mkStr' e.editorStr,
-        mkTag' "i" <$> e.tags.find? "booktitle",
+        mkTag' "i" <$> e.tags["booktitle"]?,
         formatVolumeAndSeries e false,
-        mkStr <$> e.tags.find? "pages"
+        mkStr <$> e.tags["pages"]?
       ],
       formatAddressOrganizationPublisherDate e true
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatManual : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence #[mkTag' "i" <$> e.tags.find? "title"],
+    sentence #[mkTag' "i" <$> e.tags["title"]?],
     sentence #[
-      mkStr <$> e.tags.find? "organization",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["organization"]?,
+      mkStr <$> e.tags["address"]?,
       formatEdition e,
       mkStr' e.dateStr
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatMasterThesis : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
       mkStr' "Master's thesis",
-      mkStr <$> e.tags.find? "school",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["school"]?,
+      mkStr <$> e.tags["address"]?,
       mkStr' e.dateStr
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatMisc : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
-      mkStr <$> e.tags.find? "howpublished",
+      mkStr <$> e.tags["howpublished"]?,
       mkStr' e.dateStr
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatPhDThesis : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence #[mkTag' "i" <$> e.tags.find? "title"],
+    sentence #[mkTag' "i" <$> e.tags["title"]?],
     sentence #[
-      (mkStr <$> e.tags.find? "type") <|> mkStr' "PhD thesis",
-      mkStr <$> e.tags.find? "school",
-      mkStr <$> e.tags.find? "address",
+      (mkStr <$> e.tags["type"]?) <|> mkStr' "PhD thesis",
+      mkStr <$> e.tags["school"]?,
+      mkStr <$> e.tags["address"]?,
       mkStr' e.dateStr
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
@@ -486,9 +486,9 @@ def formatProceedings : Array Content :=
   let arr : Array (Option (Array Content)) :=
     if e.editorStr.isEmpty then
       #[
-        sentence' <$> e.tags.find? "organization",
+        sentence' <$> e.tags["organization"]?,
         sentence #[
-          mkTag' "i" <$> e.tags.find? "title",
+          mkTag' "i" <$> e.tags["title"]?,
           formatVolumeAndSeries e false,
           formatAddressOrganizationPublisherDate e false
         ]
@@ -497,39 +497,39 @@ def formatProceedings : Array Content :=
       #[
         sentence' e.editorStr,
         sentence #[
-          mkTag' "i" <$> e.tags.find? "title",
+          mkTag' "i" <$> e.tags["title"]?,
           formatVolumeAndSeries e false,
           formatAddressOrganizationPublisherDate e true
         ]
       ]
   toplevel <| arr ++ #[
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatTechReport : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
       words #[
-        (mkStr <$> e.tags.find? "type") <|> mkStr' "Technical Report",
-        mkStr <$> e.tags.find? "number"
+        (mkStr <$> e.tags["type"]?) <|> mkStr' "Technical Report",
+        mkStr <$> e.tags["number"]?
       ],
-      mkStr <$> e.tags.find? "institution",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["institution"]?,
+      mkStr <$> e.tags["address"]?,
       mkStr' e.dateStr
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatUnpublished : Array Content :=
   toplevel #[
     sentence' e.authorStr,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
-      mkStr <$> e.tags.find? "note",
+      mkStr <$> e.tags["note"]?,
       mkStr' e.dateStr
     ],
     formatWebRefs e
@@ -621,12 +621,12 @@ partial def toBase26 (n : Nat) (length : Nat := 1) : String :=
     toBase26Aux n length ""
 
 partial def deduplicateTagAux
-    (x : Array String × HashMap String (Nat × Nat)) (i : Nat) :
-    Array String × HashMap String (Nat × Nat) :=
+    (x : Array String × Std.HashMap String (Nat × Nat)) (i : Nat) :
+    Array String × Std.HashMap String (Nat × Nat) :=
   if h : i < x.1.size then
     let tag := x.1[i]
-    let y : Array String × HashMap String (Nat × Nat) :=
-      if let .some (first, count) := x.2.find? tag then
+    let y : Array String × Std.HashMap String (Nat × Nat) :=
+      if let .some (first, count) := x.2[tag]? then
         let z : Array String :=
           if count = 0 then
             x.1.modify first fun x => x.dropRight 1 ++ "a]"
