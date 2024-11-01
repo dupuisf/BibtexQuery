@@ -27,10 +27,10 @@ def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
   let keysOnly := parseRes.filterMap (fun entry => match entry with
                                                    | BibtexQuery.Entry.normalType _ name _ => some name
                                                    | _ => none)
-  let ⟨_, dupl⟩ : (Lean.HashMap String Unit) × List String :=
-    keysOnly.foldl (init := ⟨Lean.HashMap.empty, []⟩)
+  let ⟨_, dupl⟩ : (Std.HashMap String Unit) × List String :=
+    keysOnly.foldl (init := ⟨Std.HashMap.empty, []⟩)
       (fun ⟨hsh, lst⟩ key =>
-        match hsh.find? key with
+        match hsh[key]? with
         | none => ⟨hsh.insert key (), lst⟩
         | some _ => ⟨hsh, (key :: lst)⟩)
   dupl
