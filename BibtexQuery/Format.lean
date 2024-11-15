@@ -31,7 +31,7 @@ structure ProcessedEntry where
   /-- The name, or called citekey, of a bibtex entry. -/
   name : String
   /-- The tags of a bibtex entry, stored as a `HashMap`. Don't be confused with `tag`. -/
-  tags : HashMap String (Array TexContent)
+  tags : Std.HashMap String (Array TexContent)
   /-- The tag of a bibtex entry, e.g. `[Doe12]`. Don't be confused with `tags`. -/
   tag : String
   /-- The HTML representing a bibtex entry, e.g.
@@ -54,13 +54,13 @@ structure ProcessedEntry where
   titleWithoutDiacritics : String
 
 /-- Get the date (which is `year * 100 + month`) and the date HTML of a bibitem. -/
-def getDate (tags : HashMap String (Array TexContent)) : Nat × Array Content :=
-  if let .some yearTex := tags.find? "year" then
+def getDate (tags : Std.HashMap String (Array TexContent)) : Nat × Array Content :=
+  if let .some yearTex := tags["year"]? then
     let yearHtml := TexContent.toHtmlArray yearTex
     if let .some year := (TexContent.toPlaintextArray yearTex).toList.filter
         Char.isDigit |> String.mk |>.toNat? then
       let month : Nat :=
-        if let .some monthTex := tags.find? "month" then
+        if let .some monthTex := tags["month"]? then
           let monthStr := (TexContent.toPlaintextArray monthTex).trim.toLower
           match monthStr with
           | "jan" => 1 | "feb" => 2 | "mar" => 3
@@ -126,9 +126,9 @@ def ProcessedEntry.ofEntry (e : Entry) : Except String (Option ProcessedEntry) :
         match texContents s.iter with
         | .success _ arr => .ok (x.name, arr)
         | .error it err => .error s!"failed to run texContents on '{it.1}' at pos {it.2}: {err}"
-    let tags := HashMap.ofList lst
-    let authors := processNames (tags.findD "author" #[])
-    let editors := processNames (tags.findD "editor" #[])
+    let tags := Std.HashMap.ofList lst
+    let authors := processNames (tags.getD "author" #[])
+    let editors := processNames (tags.getD "editor" #[])
     let authorOrEditor := if authors.isEmpty then editors else authors
     let (date, dateHtml) := getDate tags
     pure <| .some {
@@ -148,7 +148,7 @@ def ProcessedEntry.ofEntry (e : Entry) : Except String (Option ProcessedEntry) :
           #[]
       date := date
       dateHtml := dateHtml
-      titleWithoutDiacritics := tags.findD "title" #[] |> TexContent.toPlaintextArray |>
+      titleWithoutDiacritics := tags.getD "title" #[] |> TexContent.toPlaintextArray |>
         stripDiacriticsFromString |>.map getUpperChar
     }
   | _ => pure .none
@@ -257,20 +257,20 @@ def mkWebRef (urlPrefix namePrefix url : String) : Array Content :=
 -/
 
 def formatVolumeAndPages : Option (Array Content) := do
-  let pages ← e.tags.find? "pages"
-  match e.tags.find? "volume" with
+  let pages ← e.tags["pages"]?
+  match e.tags["volume"]? with
   | .some volume =>
     arrayConcat #[
       mkStr volume,
-      (mkStr · "(" ")") <$> e.tags.find? "number",
+      (mkStr · "(" ")") <$> e.tags["number"]?,
       mkStr pages ":"
     ]
   | .none => mkStr pages "pages "
 
 def formatEprint : Option (Array Content) := do
-  let eprint ← TexContent.toPlaintextArray <$> e.tags.find? "eprint"
+  let eprint ← TexContent.toPlaintextArray <$> e.tags["eprint"]?
   let eprinttype :=
-    TexContent.toPlaintextArray <$> (e.tags.find? "eprinttype" <|> e.tags.find? "archiveprefix")
+    TexContent.toPlaintextArray <$> (e.tags["eprinttype"]? <|> e.tags["archiveprefix"]?)
       |>.getD "arXiv"
   let eprintlist : Array (Array String × String × String) := #[
     (#["arxiv"], "https://arxiv.org/abs/", "arXiv:"),
@@ -293,9 +293,9 @@ def formatEprint : Option (Array Content) := do
 
 def formatWebRefs : Array Content :=
   let formatUrl : Option (Array Content) :=
-    mkUrl <$> TexContent.toPlaintextArray <$> e.tags.find? "url"
+    mkUrl <$> TexContent.toPlaintextArray <$> e.tags["url"]?
   let formatWebRef (tagName urlPrefix namePrefix : String) : Option (Array Content) :=
-    mkWebRef urlPrefix namePrefix <$> TexContent.toPlaintextArray <$> e.tags.find? tagName
+    mkWebRef urlPrefix namePrefix <$> TexContent.toPlaintextArray <$> e.tags[tagName]?
   sentence #[
     formatWebRef "pubmed" "https://www.ncbi.nlm.nih.gov/pubmed/" "PMID:",
     formatWebRef "doi" "https://doi.org/" "doi:",
@@ -309,14 +309,14 @@ def formatAuthorOrEditor : Array Content :=
   sentence1 (if e.authorHtml.isEmpty then e.editorHtml else e.authorHtml)
 
 def formatVolumeAndSeries (asSentence : Bool) : Array Content :=
-  let series := e.tags.find? "series"
+  let series := e.tags["series"]?
   let arr : Array Content :=
-    if let .some volume := e.tags.find? "volume" then
+    if let .some volume := e.tags["volume"]? then
       arrayConcat #[
         mkStr volume (if asSentence then "Volume " else "volume "),
         (mkStr · " of ") <$> series
       ]
-    else if let .some number := e.tags.find? "number" then
+    else if let .some number := e.tags["number"]? then
       arrayConcat #[
         mkStr number (if asSentence then "Number " else "number "),
         (mkStr · " in ") <$> series
@@ -327,12 +327,12 @@ def formatVolumeAndSeries (asSentence : Bool) : Array Content :=
 
 def formatChapterAndPages : Array Content :=
   arrayConcat #[
-    (mkStr · "chapter ") <$> e.tags.find? "chapter",
-    (mkStr · "pages ") <$> e.tags.find? "pages"
+    (mkStr · "chapter ") <$> e.tags["chapter"]?,
+    (mkStr · "pages ") <$> e.tags["pages"]?
   ] #[.Character ", "]
 
 def formatEdition : Option (Array Content) :=
-  if let .some arr := e.tags.find? "edition" then
+  if let .some arr := e.tags["edition"]? then
     let s := TexContent.toPlaintextArray arr |> stripDiacriticsFromString |>.map getLowerChar
     if s.endsWith " ed." || s.endsWith " ed" || (s.replace "edition" "").length < s.length then
       TexContent.toHtmlArray arr
@@ -359,10 +359,10 @@ def formatAddressOrganizationPublisherDate (includeOrganization : Bool) :
     Array Content :=
   let organization : Option (Array Content) :=
     if includeOrganization then
-      mkStr <$> e.tags.find? "organization"
+      mkStr <$> e.tags["organization"]?
     else
       .none
-  if let .some address := e.tags.find? "address" then
+  if let .some address := e.tags["address"]? then
     words #[
       sentence #[
         mkStr address,
@@ -370,18 +370,18 @@ def formatAddressOrganizationPublisherDate (includeOrganization : Bool) :
       ],
       sentence #[
         organization,
-        mkStr <$> e.tags.find? "publisher"
+        mkStr <$> e.tags["publisher"]?
       ]
     ]
   else
     sentence #[
       organization,
-      mkStr <$> e.tags.find? "publisher",
+      mkStr <$> e.tags["publisher"]?,
       e.dateHtml
     ]
 
 def formatISBN : Option (Array Content) :=
-  (sentence1 <| mkStr · "ISBN ") <$> e.tags.find? "isbn"
+  (sentence1 <| mkStr · "ISBN ") <$> e.tags["isbn"]?
 
 /-!
 
@@ -392,42 +392,42 @@ def formatISBN : Option (Array Content) :=
 def formatArticle : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
-      mkTag "i" <$> e.tags.find? "journal",
+      mkTag "i" <$> e.tags["journal"]?,
       formatVolumeAndPages e,
       e.dateHtml
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatBook : Array Content :=
   toplevel #[
     formatAuthorOrEditor e,
-    sentence #[mkTag "i" <$> e.tags.find? "title"],
+    sentence #[mkTag "i" <$> e.tags["title"]?],
     sentence1 <$> formatEdition e,
     formatVolumeAndSeries e true,
     sentence #[
-      mkStr <$> e.tags.find? "publisher",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["publisher"]?,
+      mkStr <$> e.tags["address"]?,
       e.dateHtml
     ],
     formatISBN e,
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatBooklet : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     formatVolumeAndSeries e true,
     sentence #[
-      mkStr <$> e.tags.find? "howpublished",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["howpublished"]?,
+      mkStr <$> e.tags["address"]?,
       e.dateHtml,
-      mkStr <$> e.tags.find? "note"
+      mkStr <$> e.tags["note"]?
     ],
     formatWebRefs e
   ]
@@ -436,16 +436,16 @@ def formatInBook : Array Content :=
   toplevel #[
     formatAuthorOrEditor e,
     sentence #[
-      mkTag "i" <$> e.tags.find? "title",
+      mkTag "i" <$> e.tags["title"]?,
       formatEdition e,
       formatChapterAndPages e
     ],
     formatVolumeAndSeries e true,
     sentence #[
-      mkStr <$> e.tags.find? "publisher",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["publisher"]?,
+      mkStr <$> e.tags["address"]?,
       e.dateHtml,
-      mkStr <$> e.tags.find? "note"
+      mkStr <$> e.tags["note"]?
     ],
     formatWebRefs e
   ]
@@ -453,17 +453,17 @@ def formatInBook : Array Content :=
 def formatInCollection : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     (fun x => #[.Character "In "] ++ x) <$> sentence #[
       e.editorHtml,
-      mkTag "i" <$> e.tags.find? "booktitle",
+      mkTag "i" <$> e.tags["booktitle"]?,
       formatEdition e,
       formatVolumeAndSeries e false,
       formatChapterAndPages e
     ],
     sentence #[
-      mkStr <$> e.tags.find? "publisher",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["publisher"]?,
+      mkStr <$> e.tags["address"]?,
       e.dateHtml
     ],
     formatWebRefs e
@@ -472,71 +472,71 @@ def formatInCollection : Array Content :=
 def formatInProceedings : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     (fun x => #[.Character "In "] ++ x) <$> words #[
       sentence #[
         e.editorHtml,
-        mkTag "i" <$> e.tags.find? "booktitle",
+        mkTag "i" <$> e.tags["booktitle"]?,
         formatVolumeAndSeries e false,
-        mkStr <$> e.tags.find? "pages"
+        mkStr <$> e.tags["pages"]?
       ],
       formatAddressOrganizationPublisherDate e true
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatManual : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence #[mkTag "i" <$> e.tags.find? "title"],
+    sentence #[mkTag "i" <$> e.tags["title"]?],
     sentence1 <$> formatEdition e,
     sentence #[
-      mkStr <$> e.tags.find? "organization",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["organization"]?,
+      mkStr <$> e.tags["address"]?,
       e.dateHtml
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatMasterThesis : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
       .some #[.Character "Master's thesis"],
-      mkStr <$> e.tags.find? "school",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["school"]?,
+      mkStr <$> e.tags["address"]?,
       e.dateHtml
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatMisc : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
-      mkStr <$> e.tags.find? "howpublished",
+      mkStr <$> e.tags["howpublished"]?,
       e.dateHtml
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatPhDThesis : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence #[mkTag "i" <$> e.tags.find? "title"],
+    sentence #[mkTag "i" <$> e.tags["title"]?],
     sentence #[
-      (mkStr <$> e.tags.find? "type") <|> .some #[.Character "PhD thesis"],
-      mkStr <$> e.tags.find? "school",
-      mkStr <$> e.tags.find? "address",
+      (mkStr <$> e.tags["type"]?) <|> .some #[.Character "PhD thesis"],
+      mkStr <$> e.tags["school"]?,
+      mkStr <$> e.tags["address"]?,
       e.dateHtml
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
@@ -544,9 +544,9 @@ def formatProceedings : Array Content :=
   let arr : Array (Option (Array Content)) :=
     if e.editorHtml.isEmpty then
       #[
-        sentence' <$> e.tags.find? "organization",
+        sentence' <$> e.tags["organization"]?,
         sentence #[
-          mkTag "i" <$> e.tags.find? "title",
+          mkTag "i" <$> e.tags["title"]?,
           formatVolumeAndSeries e false,
           formatAddressOrganizationPublisherDate e false
         ]
@@ -555,39 +555,39 @@ def formatProceedings : Array Content :=
       #[
         sentence1 e.editorHtml,
         sentence #[
-          mkTag "i" <$> e.tags.find? "title",
+          mkTag "i" <$> e.tags["title"]?,
           formatVolumeAndSeries e false,
           formatAddressOrganizationPublisherDate e true
         ]
       ]
   toplevel <| arr ++ #[
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatTechReport : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
       words #[
-        (mkStr <$> e.tags.find? "type") <|> .some #[.Character "Technical Report"],
-        mkStr <$> e.tags.find? "number"
+        (mkStr <$> e.tags["type"]?) <|> .some #[.Character "Technical Report"],
+        mkStr <$> e.tags["number"]?
       ],
-      mkStr <$> e.tags.find? "institution",
-      mkStr <$> e.tags.find? "address",
+      mkStr <$> e.tags["institution"]?,
+      mkStr <$> e.tags["address"]?,
       e.dateHtml
     ],
-    sentence' <$> e.tags.find? "note",
+    sentence' <$> e.tags["note"]?,
     formatWebRefs e
   ]
 
 def formatUnpublished : Array Content :=
   toplevel #[
     sentence1 e.authorHtml,
-    sentence' <$> e.tags.find? "title",
+    sentence' <$> e.tags["title"]?,
     sentence #[
-      mkStr <$> e.tags.find? "note",
+      mkStr <$> e.tags["note"]?,
       e.dateHtml
     ],
     formatWebRefs e
@@ -679,12 +679,12 @@ partial def toBase26 (n : Nat) (length : Nat := 1) : String :=
     toBase26Aux n length ""
 
 partial def deduplicateTagAux
-    (x : Array String × HashMap String (Nat × Nat)) (i : Nat) :
-    Array String × HashMap String (Nat × Nat) :=
+    (x : Array String × Std.HashMap String (Nat × Nat)) (i : Nat) :
+    Array String × Std.HashMap String (Nat × Nat) :=
   if h : i < x.1.size then
     let tag := x.1[i]
-    let y : Array String × HashMap String (Nat × Nat) :=
-      if let .some (first, count) := x.2.find? tag then
+    let y : Array String × Std.HashMap String (Nat × Nat) :=
+      if let .some (first, count) := x.2[tag]? then
         let z : Array String :=
           if count = 0 then
             x.1.modify first fun x => x.dropRight 1 ++ "a]"
