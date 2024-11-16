@@ -274,6 +274,7 @@ def formatEprint : Option (Array Content) := do
       |>.getD "arXiv"
   let eprintlist : Array (Array String × String × String) := #[
     (#["arxiv"], "https://arxiv.org/abs/", "arXiv:"),
+    (#["iacr"], "https://eprint.iacr.org/", "IACR:"),
     (#["pmcid", "pmc"], "https://www.ncbi.nlm.nih.gov/pmc/articles/", "PMCID:")
   ]
   let checkEprint : Array String × String × String → Option (Array Content) :=
