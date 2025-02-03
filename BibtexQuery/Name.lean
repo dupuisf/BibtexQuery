@@ -133,7 +133,7 @@ def getLastNameAbbr (arr : Array String) : String × String :=
   | #[] => ("", "")
   | #[s] =>
     let s := getAlphabets s
-    let arr : Array Nat := s.zipWithIndex.filterMap fun x =>
+    let arr : Array Nat := s.zipIdx.filterMap fun x =>
       if isUppercase x.1 then .some x.2 else .none
     if arr.size = 2 ∧ arr[0]! + 2 = arr[1]! then
       let s := s.toSubarray.drop arr[0]! |>.take 3 |>.toArray.toList |> String.mk
