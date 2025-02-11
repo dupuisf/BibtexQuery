@@ -1,0 +1,14 @@
+name = "BibtexQuery"
+defaultTargets = ["BibtexQuery", "«bibtex-query»"]
+
+[[require]]
+name = "UnicodeBasic"
+git = "https://github.com/fgdorais/lean4-unicode-basic"
+rev = "main"
+
+[[lean_lib]]
+name = "BibtexQuery"
+
+[[lean_exe]]
+name = "«bibtex-query»"
+root = "BibtexQuery.Main"
