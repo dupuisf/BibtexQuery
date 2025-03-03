@@ -3,8 +3,8 @@ defaultTargets = ["BibtexQuery", "«bibtex-query»"]
 
 [[require]]
 name = "UnicodeBasic"
-git = "https://github.com/fgdorais/lean4-unicode-basic"
-rev = "main"
+git = "https://github.com/jcommelin/lean4-unicode-basic" # switch back to fgdorais
+rev = "bump_to_v4.18.0-rc1" # switch back to main
 
 [[lean_lib]]
 name = "BibtexQuery"
