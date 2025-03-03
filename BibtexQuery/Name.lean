@@ -139,13 +139,13 @@ def getLastNameAbbr (arr : Array String) : String × String :=
       let s := s.toSubarray.drop arr[0]! |>.take 3 |>.toArray.toList |> String.mk
       (s, s)
     else if arr.size ≥ 2 then
-      let s := arr.map s.get! |>.toList |> String.mk
+      let s := arr.map (s[·]!) |>.toList |> String.mk
       (s, s)
     else
       let s := String.mk s.toList
       (s.take 1, s.take 3)
   | _ =>
-    let s := arr.filterMap (getAlphabets · |>.get? 0) |>.toList |> String.mk
+    let s := arr.filterMap (getAlphabets · |> (·[0]?)) |>.toList |> String.mk
     (s, s)
 
 /-- Represents the name of a person in bibtex author field. -/
