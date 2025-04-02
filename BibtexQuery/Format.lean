@@ -7,7 +7,7 @@ Author: Jz Pan
 import BibtexQuery.Name
 import BibtexQuery.Entry
 import Lean.Data.Xml.Basic
-import Lean.Data.HashMap
+import Std.Data.HashMap
 import Std.Internal.Parsec
 import Std.Internal.Parsec.String
 
@@ -701,7 +701,7 @@ partial def deduplicateTagAux
 
 /-- Deduplicate an array of tag. -/
 def deduplicateTag' (arr : Array String) : Array String :=
-  (deduplicateTagAux (arr, .empty) 0).1
+  (deduplicateTagAux (arr, ∅) 0).1
 
 /-- Deduplicate the tag of an array of bibtex entries. -/
 def deduplicateTag (arr : Array ProcessedEntry) : Array ProcessedEntry :=

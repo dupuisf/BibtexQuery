@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Frédéric Dupuis
 -/
 
-import Lean.Data.HashMap
 import BibtexQuery.Parser
 import BibtexQuery.String
 import BibtexQuery.Query
@@ -28,7 +27,7 @@ def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
                                                    | BibtexQuery.Entry.normalType _ name _ => some name
                                                    | _ => none)
   let ⟨_, dupl⟩ : (Std.HashMap String Unit) × List String :=
-    keysOnly.foldl (init := ⟨Std.HashMap.empty, []⟩)
+    keysOnly.foldl (init := ⟨∅, []⟩)
       (fun ⟨hsh, lst⟩ key =>
         match hsh[key]? with
         | none => ⟨hsh.insert key (), lst⟩
