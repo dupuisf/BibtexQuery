@@ -129,6 +129,8 @@ end
 
 mutual
 
+open Std.TreeMap
+
 /-- Convert a TeX content to HTML, represented by an array of `Lean.Xml.Content`.
 A few TeX commands can be converted to corresponding HTML. -/
 partial def toHtml (x : TexContent) : Array Content :=
@@ -136,13 +138,13 @@ partial def toHtml (x : TexContent) : Array Content :=
   | .normal s => #[.Character s]
   | .char c =>
     let ret : Content := match c with
-    | '\\' | '$' => .Element ⟨ "span", RBMap.empty, #[.Character c.toString] ⟩
+    | '\\' | '$' => .Element ⟨ "span", empty, #[.Character c.toString] ⟩
     | _ => .Character c.toString
     #[ret]
   | .command cmd =>
     let ret : Content := match cmd.trim with
-    | "\\\\" => .Element ⟨ "br", RBMap.empty, #[] ⟩
-    | _ => .Element ⟨ "span", RBMap.empty.insert "style" "color:red;", #[.Character cmd] ⟩
+    | "\\\\" => .Element ⟨ "br", empty, #[] ⟩
+    | _ => .Element ⟨ "span", empty.insert "style" "color:red;", #[.Character cmd] ⟩
     #[ret]
   | .math dollar s => #[.Character (dollar ++ s ++ dollar)]
   | .braced arr => toHtmlArray arr
@@ -155,34 +157,34 @@ partial def toHtmlArray (arr : Array TexContent) (i : Nat := 0)
         match cmd.trim with
         | "\\url" =>
           let next := arr[i + 1]
-          let x : Content := .Element ⟨ "a", RBMap.empty.insert "href"
+          let x : Content := .Element ⟨ "a", empty.insert "href"
             next.toPlaintext, next.toHtml ⟩
           toHtmlArray arr (i + 2) (ret ++ #[x])
         | "\\textrm" =>
           let next := arr[i + 1]
-          let x : Content := .Element ⟨ "span", RBMap.empty.insert "style"
+          let x : Content := .Element ⟨ "span", empty.insert "style"
             "font-style: normal; font-weight: normal", next.toHtml ⟩
           toHtmlArray arr (i + 2) (ret ++ #[x])
         | "\\textbf" =>
           let next := arr[i + 1]
-          let x : Content := .Element ⟨ "b", RBMap.empty, next.toHtml ⟩
+          let x : Content := .Element ⟨ "b", empty, next.toHtml ⟩
           toHtmlArray arr (i + 2) (ret ++ #[x])
         | "\\textit" =>
           let next := arr[i + 1]
-          let x : Content := .Element ⟨ "i", RBMap.empty, next.toHtml ⟩
+          let x : Content := .Element ⟨ "i", empty, next.toHtml ⟩
           toHtmlArray arr (i + 2) (ret ++ #[x])
         | "\\emph" =>
           let next := arr[i + 1]
-          let x : Content := .Element ⟨ "em", RBMap.empty, next.toHtml ⟩
+          let x : Content := .Element ⟨ "em", empty, next.toHtml ⟩
           toHtmlArray arr (i + 2) (ret ++ #[x])
         | "\\texttt" =>
           let next := arr[i + 1]
-          let x : Content := .Element ⟨ "span", RBMap.empty.insert "style"
+          let x : Content := .Element ⟨ "span", empty.insert "style"
             "font-family: monospace", next.toHtml ⟩
           toHtmlArray arr (i + 2) (ret ++ #[x])
         | "\\textsc" =>
           let next := arr[i + 1]
-          let x : Content := .Element ⟨ "span", RBMap.empty.insert "style"
+          let x : Content := .Element ⟨ "span", empty.insert "style"
             "font-variant: small-caps", next.toHtml ⟩
           toHtmlArray arr (i + 2) (ret ++ #[x])
         | _ => toHtmlArray arr (i + 1) (ret ++ arr[i].toHtml)
