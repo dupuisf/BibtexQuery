@@ -187,13 +187,15 @@ namespace Formatter
 
 -/
 
+open Std.TreeMap
+
 def mkTag (name : String) (content : Array TexContent) : Array Content :=
   let ret := TexContent.toHtmlArray content
-  if ret.isEmpty then #[] else #[.Element ⟨ name, RBMap.empty, ret ⟩]
+  if ret.isEmpty then #[] else #[.Element ⟨ name, empty, ret ⟩]
 
 def mkHref (href : String) (content : Array TexContent) : Array Content :=
   let ret := TexContent.toHtmlArray content
-  if ret.isEmpty then #[] else #[.Element ⟨ "a", RBMap.empty.insert "href" href, ret ⟩]
+  if ret.isEmpty then #[] else #[.Element ⟨ "a", empty.insert "href" href, ret ⟩]
 
 def mkStr (content : Array TexContent) (pre post : String := "") : Array Content :=
   let ret := TexContent.toHtmlArray content
