@@ -136,7 +136,7 @@ def String.splitIntoNames (s : String) : List String :=
   (s.splitOn (sep := " and ")).map trim
 
 def String.toLastName (s : String) : String :=
-  let s' := (s.split (fun c => c = ',')).map trim
+  let s' := (s.splitToList (fun c => c = ',')).map trim
   match s' with
   | [s₁] => s₁
   | (s₁ :: _) => s₁
@@ -147,7 +147,7 @@ def String.toLastNames (s : String) : String :=
 
 /-- Standardize to "Firstname Lastname" -/
 def String.toFirstnameLastname (s : String) : String :=
-  let s' := (s.split (fun c => c = ',')).map trim
+  let s' := (s.splitToList (fun c => c = ',')).map trim
   match s' with
   | [s₁] => s₁
   | [s₁, s₂] => s₂ ++ " " ++ s₁
