@@ -27,7 +27,7 @@ def _root_.String.parse? [Inhabited α] (s : String) (p : Parser α) : Option α
   | .success _ x => some x
   | .error _ _ => none
 
-def _root_.String.parseDebug [Inhabited α] (s : String) (p : Parser α) : Option (α × String.Pos) :=
+def _root_.String.parseDebug [Inhabited α] (s : String) (p : Parser α) : Option (α × String.Pos.Raw) :=
   match p s.iter with
   | .success pos x => some ⟨x, pos.i⟩
   | .error _ _ => none

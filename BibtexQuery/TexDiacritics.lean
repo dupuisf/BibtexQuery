@@ -100,10 +100,10 @@ mutual
 /-- Get the first character of the plaintext of a TeX content. -/
 partial def getFirstChar (x : TexContent) : Option Char :=
   match x with
-  | .normal s => s.get? 0
+  | .normal s => String.Pos.Raw.get? s 0
   | .char c => c
   | .command _ => .none
-  | .math dollar _ => dollar.get? 0
+  | .math dollar _ => String.Pos.Raw.get? dollar 0
   | .braced arr => getFirstCharArray arr
 
 partial def getFirstCharArray (arr : Array TexContent) : Option Char :=
@@ -119,7 +119,7 @@ partial def getLastChar (x : TexContent) : Option Char :=
   | .normal s => if s.isEmpty then .none else s.back
   | .char c => c
   | .command _ => .none
-  | .math dollar _ => dollar.get? 0
+  | .math dollar _ => String.Pos.Raw.get? dollar 0
   | .braced arr => getLastCharArray arr
 
 partial def getLastCharArray (arr : Array TexContent) : Option Char :=

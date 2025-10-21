@@ -121,13 +121,13 @@ def Char.asciify : Char → Char
 
 def String.asciify (s : String) : String := s.map Char.asciify
 
---#eval "Dès Noël où un zéphyr haï me vêt de glaçons würmiens, je dîne d'exquis rôtis de 
+--#eval "Dès Noël où un zéphyr haï me vêt de glaçons würmiens, je dîne d'exquis rôtis de
 --bœuf au kir à l'aÿ d'âge mûr & cætera".asciify
 
 --#eval "Testfile aisdfjoai".foldl (fun s c => s ++ "A") ""
 --#eval '{'.asciify.toLower
 
-def String.flattenWords (s : String) : String := s.foldl 
+def String.flattenWords (s : String) : String := s.foldl
   (fun s c => s ++ (if c.asciify.toLower.isAlphanum then c.asciify.toLower.toString else "")) ""
 
 --#eval "Frédéric Dupuis, Marco {T}omamichel".flattenWords
@@ -136,7 +136,7 @@ def String.splitIntoNames (s : String) : List String :=
   (s.splitOn (sep := " and ")).map trim
 
 def String.toLastName (s : String) : String :=
-  let s' := (s.split (fun c => c = ',')).map trim
+  let s' := (s.splitToList (fun c => c = ',')).map trim
   match s' with
   | [s₁] => s₁
   | (s₁ :: _) => s₁
@@ -147,7 +147,7 @@ def String.toLastNames (s : String) : String :=
 
 /-- Standardize to "Firstname Lastname" -/
 def String.toFirstnameLastname (s : String) : String :=
-  let s' := (s.split (fun c => c = ',')).map trim
+  let s' := (s.splitToList (fun c => c = ',')).map trim
   match s' with
   | [s₁] => s₁
   | [s₁, s₂] => s₂ ++ " " ++ s₁
@@ -160,9 +160,9 @@ partial def Substring.containsSubstrStartingAt (s : Substring) (q : String) : Bo
   if s.toString.length = 0 then q.length = 0
   else if q.isPrefixOf s.toString then true
   else (s.drop 1).containsSubstrStartingAt q
-  
+
 def String.containsSubstr (s : String) (q : String) : Bool :=
   s.toSubstring.containsSubstrStartingAt q
 
 def String.pad (s : String) (c : Char) (n : Nat) : String :=
-  (s ++ ⟨List.replicate n c⟩).take n
+  (s ++ (List.replicate n c).asString).take n
