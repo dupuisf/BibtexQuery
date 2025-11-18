@@ -110,17 +110,17 @@ def natNum : Parser Nat := attempt do
   return n
 
 def manyCharsUntilWithPrev (test : Option Char → Char → Bool) : Parser String := fun it =>
-  let ⟨res, pos⟩ := go it.1 it.2 ""
+  let ⟨res, pos⟩ := go it.2 ""
   .success ⟨_, pos⟩ res
 where
-  go {s : String} (str : String) (it : s.ValidPos) (acc : String) : String × s.ValidPos :=
+  go {s : String} (it : s.ValidPos) (acc : String) : String × s.ValidPos :=
     if h : ¬it.IsAtEnd then
       let c := it.get h
       let prev : Option Char := if acc == "" then none else acc.back
       if test prev c then
         (acc, it)
       else
-        go str (it.next h) (acc ++ c.toString)
+        go (it.next h) (acc ++ c.toString)
     else
       (acc, it)
   termination_by it

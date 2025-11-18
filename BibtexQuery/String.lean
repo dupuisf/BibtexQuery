@@ -10,11 +10,6 @@ Author: Frédéric Dupuis
 This file contains various string processing functions.
 -/
 
-/-- Get the line number of the current position of the iterator. -/
-def String.Legacy.Iterator.lineNumber (it : String.Legacy.Iterator) : Nat :=
-  let s : Substring.Raw := ⟨it.toString, 0, it.pos⟩
-  s.foldl (fun n c => if c = '\n' then n+1 else n) 1
-
 /-- Get the line number of the current position for ValidPos. -/
 def lineNumberOfValidPos (it : Sigma String.ValidPos) : Nat :=
   let s : Substring.Raw := ⟨it.1, 0, it.2.offset⟩
@@ -161,6 +156,7 @@ def String.toFirstnameLastname (s : String) : String :=
 def String.toFullNames (s : String) : String :=
 String.join $ (s.splitIntoNames.map String.toFirstnameLastname).map String.flattenWords
 
+-- FIXME: use `String.Slice` instead of `Substring`.
 partial def Substring.Raw.containsSubstrStartingAt (s : Substring.Raw) (q : String) : Bool :=
   if (Substring.Raw.toString s).length = 0 then q.length = 0
   else if q.isPrefixOf (Substring.Raw.toString s) then true
