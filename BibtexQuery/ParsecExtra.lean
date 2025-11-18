@@ -23,13 +23,13 @@ open Lean Std.Internal.Parsec.String Std.Internal.Parsec
 namespace BibtexQuery.ParsecExtra
 
 def _root_.String.parse? [Inhabited α] (s : String) (p : Parser α) : Option α :=
-  match p s.iter with
+  match p ⟨s, s.startValidPos⟩ with
   | .success _ x => some x
   | .error _ _ => none
 
 def _root_.String.parseDebug [Inhabited α] (s : String) (p : Parser α) : Option (α × String.Pos.Raw) :=
-  match p s.iter with
-  | .success pos x => some ⟨x, pos.i⟩
+  match p ⟨s, s.startValidPos⟩ with
+  | .success pos x => some ⟨x, Input.pos pos⟩
   | .error _ _ => none
 
 @[inline]
@@ -110,10 +110,19 @@ def natNum : Parser Nat := attempt do
   return n
 
 def manyCharsUntilWithPrev (test : Option Char → Char → Bool) : Parser String := fun it =>
-  let out :=
-    it.foldUntil "" fun acc c =>
+  let ⟨res, pos⟩ := go it.1 it.2 ""
+  .success ⟨_, pos⟩ res
+where
+  go {s : String} (str : String) (it : s.ValidPos) (acc : String) : String × s.ValidPos :=
+    if h : ¬it.IsAtEnd then
+      let c := it.get h
       let prev : Option Char := if acc == "" then none else acc.back
-      if test prev c then none else some (acc ++ c.toString)
-  .success out.2 out.1
+      if test prev c then
+        (acc, it)
+      else
+        go str (it.next h) (acc ++ c.toString)
+    else
+      (acc, it)
+  termination_by it
 
 end BibtexQuery.ParsecExtra

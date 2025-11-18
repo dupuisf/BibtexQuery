@@ -92,7 +92,7 @@ def stripDiacritics (c : Char) : Char :=
 /-- Strip diacritics from a string. -/
 def stripDiacriticsFromString (s : String) : String :=
   s.toList.toArray.map stripDiacritics |>.filter (not <| GeneralCategory.isMark ·)
-    |>.toList |> String.mk
+    |>.toList |> String.ofList
 
 /-- Get the array of alphabets of a string after stripping diacritics. -/
 def getAlphabets (s : String) : Array Char :=
@@ -136,16 +136,16 @@ def getLastNameAbbr (arr : Array String) : String × String :=
     let arr : Array Nat := s.zipIdx.filterMap fun x =>
       if isUppercase x.1 then .some x.2 else .none
     if arr.size = 2 ∧ arr[0]! + 2 = arr[1]! then
-      let s := s.toSubarray.drop arr[0]! |>.take 3 |>.toArray.toList |> String.mk
+      let s := s.toSubarray.drop arr[0]! |>.take 3 |>.toArray.toList |> String.ofList
       (s, s)
     else if arr.size ≥ 2 then
-      let s := arr.map (s[·]!) |>.toList |> String.mk
+      let s := arr.map (s[·]!) |>.toList |> String.ofList
       (s, s)
     else
-      let s := String.mk s.toList
+      let s := String.ofList s.toList
       (s.take 1, s.take 3)
   | _ =>
-    let s := arr.filterMap (getAlphabets · |> (·[0]?)) |>.toList |> String.mk
+    let s := arr.filterMap (getAlphabets · |> (·[0]?)) |>.toList |> String.ofList
     (s, s)
 
 /-- Represents the name of a person in bibtex author field. -/

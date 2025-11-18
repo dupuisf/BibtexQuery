@@ -58,7 +58,7 @@ def getDate (tags : Std.HashMap String (Array TexContent)) : Nat × Array Conten
   if let .some yearTex := tags["year"]? then
     let yearHtml := TexContent.toHtmlArray yearTex
     if let .some year := (TexContent.toPlaintextArray yearTex).toList.filter
-        Char.isDigit |> String.mk |>.toNat? then
+        Char.isDigit |> String.ofList |>.toNat? then
       let month : Nat :=
         if let .some monthTex := tags["month"]? then
           let monthStr := (TexContent.toPlaintextArray monthTex).trim.toLower
@@ -123,9 +123,9 @@ def ProcessedEntry.ofEntry (e : Entry) : Except String (Option ProcessedEntry) :
       if x.name = "pubmed" ∨ x.name = "doi" ∨ x.name = "eprint" ∨ x.name.endsWith "url" then
         .ok (x.name, #[.normal s])
       else
-        match texContents s.iter with
+        match texContents ⟨s, s.startValidPos⟩ with
         | .success _ arr => .ok (x.name, arr)
-        | .error it err => .error s!"failed to run texContents on '{it.1}' at pos {it.2}: {err}"
+        | .error it err => .error s!"failed to run texContents on '{it.1}' at pos {Input.pos it}: {err}"
     let tags := Std.HashMap.ofList lst
     let authors := processNames (tags.getD "author" #[])
     let editors := processNames (tags.getD "editor" #[])
