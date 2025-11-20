@@ -279,7 +279,7 @@ def mathContent : Parser (Option TexContent) := fun it =>
     ((.some <| .math "$" ·) <$> aux "\\(" "\\)") it
   else if substr = "$$" then
     ((.some <| .math "$$" ·) <$> aux "$$" "$$") it
-  else if Input.curr it = '$' then
+  else if Input.hasNext it && Input.curr it = '$' then
     ((.some <| .math "$" ·) <$> aux "$" "$") it
   else
     .success it .none
