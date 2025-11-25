@@ -3,8 +3,8 @@ defaultTargets = ["BibtexQuery", "«bibtex-query»"]
 
 [[require]]
 name = "UnicodeBasic"
-git = "https://github.com/TwoFx/lean4-unicode-basic"
-rev = "markus/bump-nightly"
+git = "https://github.com/fgdorais/lean4-unicode-basic"
+rev = "nightly-testing"
 
 [[lean_lib]]
 name = "BibtexQuery"
