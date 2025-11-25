@@ -87,7 +87,7 @@ def stripDiacritics (c : Char) : Char :=
   | '\u00DF' => 's' | '\u1E9E' => 'S'
   | _ =>
     let s := getCanonicalDecomposition c
-    String.Pos.Raw.get? s (s.find fun c => getCanonicalCombiningClass c == 0) |>.getD c
+    s.find (fun c => getCanonicalCombiningClass c == 0) |>.get? |>.getD c
 
 /-- Strip diacritics from a string. -/
 def stripDiacriticsFromString (s : String) : String :=
@@ -143,7 +143,7 @@ def getLastNameAbbr (arr : Array String) : String × String :=
       (s, s)
     else
       let s := String.ofList s.toList
-      (s.take 1, s.take 3)
+      (s.take 1 |>.copy, s.take 3 |>.copy)
   | _ =>
     let s := arr.filterMap (getAlphabets · |> (·[0]?)) |>.toList |> String.ofList
     (s, s)

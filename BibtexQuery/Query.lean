@@ -24,11 +24,11 @@ inductive Query where
 deriving Repr, Inhabited
 
 def Query.ofString (s : String) : Option Query :=
-  if s.startsWith "k." then some <| .key <| s.drop 2
-  else if s.startsWith "a." then some <| .author <| s.drop 2
-  else if s.startsWith "t." then some <| .title <| s.drop 2
-  else if s.startsWith "w." then some <| .word <| s.drop 2
-  else if s.startsWith "c." then some <| .class <| s.drop 2
+  if s.startsWith "k." then some <| .key <| s.drop 2 |>.copy
+  else if s.startsWith "a." then some <| .author <| s.drop 2 |>.copy
+  else if s.startsWith "t." then some <| .title <| s.drop 2 |>.copy
+  else if s.startsWith "w." then some <| .word <| s.drop 2 |>.copy
+  else if s.startsWith "c." then some <| .class <| s.drop 2 |>.copy
   else none
 
 def Entry.matchQuery (e : Entry) (q : Query) : Bool :=

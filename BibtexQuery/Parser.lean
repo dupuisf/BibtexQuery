@@ -43,7 +43,7 @@ partial def bracedContentTail (acc : String) : Parser String := attempt do
 def bracedContent : Parser String := attempt do
   skipChar '{'
   let s ← bracedContentTail ""
-  return s.dropRight 1
+  return s.dropEnd 1 |>.copy
 
 def quotedContent : Parser String := attempt do
   skipChar '"'
