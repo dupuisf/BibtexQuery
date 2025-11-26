@@ -255,8 +255,8 @@ partial def mathContentAux : Parser String := do
     | '\\' | '$' | '{' | '}' => false
     | _ => true
   let doOne : Parser (Option String) := fun it =>
-    if it.hasNext then
-      match it.curr with
+    if Input.hasNext it then
+      match Input.curr it with
       | '{' => (.some <$> bracedContent mathContentAux) it
       | '\\' =>
         match texCommand' #["\\(", "\\)", "\\[", "\\]"] it with
@@ -272,14 +272,14 @@ partial def mathContentAux : Parser String := do
 def mathContent : Parser (Option TexContent) := fun it =>
   let aux (beginning ending : String) : Parser String :=
     pstring beginning *> mathContentAux <* pstring ending
-  let substr := it.extract (it.forward 2)
+  let substr := it.2.extract (it.2.nextn 2)
   if substr = "\\[" then
     ((.some <| .math "$$" ·) <$> aux "\\[" "\\]") it
   else if substr = "\\(" then
     ((.some <| .math "$" ·) <$> aux "\\(" "\\)") it
   else if substr = "$$" then
     ((.some <| .math "$$" ·) <$> aux "$$" "$$") it
-  else if it.curr = '$' then
+  else if Input.curr it = '$' then
     ((.some <| .math "$" ·) <$> aux "$" "$") it
   else
     .success it .none
@@ -289,8 +289,8 @@ partial def rawContentAux : Parser String := do
     | '\\' | '{' | '}' => false
     | _ => true
   let doOne : Parser (Option String) := fun it =>
-    if it.hasNext then
-      match it.curr with
+    if Input.hasNext it then
+      match Input.curr it with
       | '{' => (.some <$> bracedContent rawContentAux) it
       | '\\' => (.some <$> texCommand) it
       | '}' => .success it .none
@@ -360,10 +360,10 @@ partial def texContent : Parser (Option TexContent) := fun it =>
     match ret with
     | .some ret => .success it (.some ret)
     | .none =>
-      if it.hasNext then
-        match it.curr with
+      if Input.hasNext it then
+        match Input.curr it with
         | ' ' | '\t' | '\r' | '\n' => ((fun _ => .some (.char ' ')) <$> ws) it
-        | ',' => .success it.next <| .some <| .char it.curr
+        | ',' => .success (Input.next it) (.some (.char (Input.curr it)))
         | '\\' => texDiacriticsCommand texContent it
         | '{' => ((.some <| .braced ·) <$> (pchar '{' *> manyOptions texContent <* pchar '}')) it
         | '}' => .success it .none
