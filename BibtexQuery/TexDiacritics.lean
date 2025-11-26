@@ -50,7 +50,7 @@ partial def addDiacritics (x : TexContent) (ch : String) :
     if s.isEmpty then
       throw "expected a non-empty normal string, but got ''"
     else if GeneralCategory.isLetter s.front then
-      return .normal <| s.take 1 ++ ch ++ s.drop 1
+      return .normal <| (s.take 1).copy ++ ch ++ s.drop 1
     else
       throw s!"diacritics character can only be added after a letter, but got '{s.front}'"
   | .char c => throw s!"expected a non-empty normal string, but got '{c}'"
@@ -142,7 +142,7 @@ partial def toHtml (x : TexContent) : Array Content :=
     | _ => .Character c.toString
     #[ret]
   | .command cmd =>
-    let ret : Content := match cmd.trim with
+    let ret : Content := match cmd.trimAscii with
     | "\\\\" => .Element ⟨ "br", empty, #[] ⟩
     | _ => .Element ⟨ "span", empty.insert "style" "color:red;", #[.Character cmd] ⟩
     #[ret]
@@ -154,7 +154,7 @@ partial def toHtmlArray (arr : Array TexContent) (i : Nat := 0)
   if h : i < arr.size then
     if h' : i + 1 < arr.size then
       if let .command cmd := arr[i] then
-        match cmd.trim with
+        match cmd.trimAscii with
         | "\\url" =>
           let next := arr[i + 1]
           let x : Content := .Element ⟨ "a", empty.insert "href"
@@ -233,8 +233,8 @@ def texCommand : Parser String := pchar '\\' *> attempt do
 /-- Similar to `texCommand` but it excludes some commands. -/
 def texCommand' (exclude : Array String) : Parser String := attempt do
   let s ← texCommand
-  match exclude.find? (· == s.trim) with
-  | .some _ => fail s!"'{s.trim}' is not allowed"
+  match exclude.find? (·.toSlice == s.trimAscii) with
+  | .some _ => fail s!"'{s.trimAscii}' is not allowed"
   | .none => return s
 
 /-- Match a sequence starting with `{` and ending with `}`. -/
@@ -304,16 +304,16 @@ Sometimes it needs to read the contents after the command, in this case the `p` 
 def texDiacriticsCommand (p : Parser (Option TexContent)) : Parser (Option TexContent) := do
   let cmd ← texCommand
   -- some special commands
-  if cmd.trim = "\\url" then
+  if cmd.trimAscii == "\\url" then
     let s ← pchar '{' *> rawContentAux <* pchar '}'
     return .some <| .braced #[.command cmd, .braced <| #[.normal s]]
   -- some special characters need to put into `<span>`
-  let c : Char := match cmd.trim with
+  let c : Char := match cmd.trimAscii.copy with
   | "\\$" => '$' | "\\textbackslash" => '\\'
   | _ => ' '
   if c ≠ ' ' then return .some <| .char c
   -- some other characters
-  let s : String := match cmd.trim with
+  let s : String := match cmd.trimAscii with
   | "\\oe" => "œ" | "\\OE" => "Œ"
   | "\\ae" => "æ" | "\\AE" => "Æ"
   | "\\aa" => "å" | "\\AA" => "Å"
@@ -329,7 +329,7 @@ def texDiacriticsCommand (p : Parser (Option TexContent)) : Parser (Option TexCo
   | _ => ""
   if not s.isEmpty then return .some <| .normal s
   -- diacritics characters
-  let s : String := match cmd.trim with
+  let s : String := match cmd.trimAscii with
   | "\\`" => "\u0300" | "\\'" => "\u0301"
   | "\\^" => "\u0302" | "\\\"" => "\u0308"
   | "\\~" => "\u0303" | "\\=" => "\u0304"

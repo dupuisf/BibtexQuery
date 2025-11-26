@@ -61,7 +61,7 @@ def getDate (tags : Std.HashMap String (Array TexContent)) : Nat × Array Conten
         Char.isDigit |> String.ofList |>.toNat? then
       let month : Nat :=
         if let .some monthTex := tags["month"]? then
-          let monthStr := (TexContent.toPlaintextArray monthTex).trim.toLower
+          let monthStr := (TexContent.toPlaintextArray monthTex).trimAscii.copy.toLower
           match monthStr with
           | "jan" => 1 | "feb" => 2 | "mar" => 3
           | "apr" => 4 | "may" => 5 | "jun" => 6
@@ -100,7 +100,7 @@ def getTag (authors : Array BibtexName) (date : Nat) : String :=
       authors.map (·.oneLetterAbbr) |>.toList |> String.join
     else
       authors.map (·.threeLetterAbbr) |>.toList |> String.join
-  let dateString := if date > 0 then (toString (date / 100 + 100)).takeRight 2 else ""
+  let dateString := if date > 0 then (toString (date / 100 + 100)).takeEnd 2 else ""
   "[" ++ authorString ++ dateString ++ "]"
 
 partial def removeDuplicatedSpacesAux (s : String) : String :=
@@ -111,7 +111,7 @@ partial def removeDuplicatedSpacesAux (s : String) : String :=
     s
 
 def removeDuplicatedSpaces (s : String) : String :=
-  s.replace "\r" " " |>.replace "\n" " " |>.replace "\t" " " |>.trim |> removeDuplicatedSpacesAux
+  s.replace "\r" " " |>.replace "\n" " " |>.replace "\t" " " |>.trimAscii |>.copy |> removeDuplicatedSpacesAux
 
 /-- Get a `ProcessedEntry` from an `Entry`, computes all its field except for `html`.
 If the input is not `BibtexQuery.Entry.normalType`, returns `Option.none`. -/
@@ -243,7 +243,7 @@ def mkWebRef (urlPrefix namePrefix url : String) : Array Content :=
         url.drop namePrefix.length
       else
         url
-    if s.toLower.startsWith "http" then
+    if s.copy.toLower.startsWith "http" then
       -- the url does not starts with `urlPrefix` or `namePrefix`,
       -- but still starts with "http"
       mkUrl url
@@ -690,10 +690,10 @@ partial def deduplicateTagAux
       if let .some (first, count) := x.2[tag]? then
         let z : Array String :=
           if count = 0 then
-            x.1.modify first fun x => x.dropRight 1 ++ "a]"
+            x.1.modify first fun x => (x.dropEnd 1).copy ++ "a]"
           else
             x.1
-        let z := z.modify i fun x => x.dropRight 1 ++ toBase26 (count + 1) ++ "]"
+        let z := z.modify i fun x => (x.dropEnd 1).copy ++ toBase26 (count + 1) ++ "]"
         (z, x.2.insert tag (first, count + 1))
       else
         (x.1, x.2.insert tag (i, 0))
