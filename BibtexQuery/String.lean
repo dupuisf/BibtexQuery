@@ -15,8 +15,8 @@ def String.Legacy.Iterator.lineNumber (it : String.Legacy.Iterator) : Nat :=
   let s : Substring.Raw := ⟨it.toString, 0, it.pos⟩
   s.foldl (fun n c => if c = '\n' then n+1 else n) 1
 
-/-- Get the line number of the current position for ValidPos. -/
-def lineNumberOfValidPos (it : Sigma String.ValidPos) : Nat :=
+/-- Get the line number of the current position for Pos. -/
+def lineNumberOfPos (it : Sigma String.Pos) : Nat :=
   let s : Substring.Raw := ⟨it.1, 0, it.2.offset⟩
   s.foldl (fun n c => if c = '\n' then n+1 else n) 1
 

@@ -272,7 +272,7 @@ partial def mathContentAux : Parser String := do
 def mathContent : Parser (Option TexContent) := fun it =>
   let aux (beginning ending : String) : Parser String :=
     pstring beginning *> mathContentAux <* pstring ending
-  let substr := it.2.extract (it.2.nextn 2)
+  let substr := it.1.extract it.2 (it.2.nextn 2)
   if substr = "\\[" then
     ((.some <| .math "$$" ·) <$> aux "\\[" "\\]") it
   else if substr = "\\(" then

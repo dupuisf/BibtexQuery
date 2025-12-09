@@ -23,12 +23,12 @@ open Lean Std.Internal.Parsec.String Std.Internal.Parsec
 namespace BibtexQuery.ParsecExtra
 
 def _root_.String.parse? [Inhabited α] (s : String) (p : Parser α) : Option α :=
-  match p ⟨s, s.startValidPos⟩ with
+  match p ⟨s, s.startPos⟩ with
   | .success _ x => some x
   | .error _ _ => none
 
 def _root_.String.parseDebug [Inhabited α] (s : String) (p : Parser α) : Option (α × String.Pos.Raw) :=
-  match p ⟨s, s.startValidPos⟩ with
+  match p ⟨s, s.startPos⟩ with
   | .success pos x => some ⟨x, Input.pos pos⟩
   | .error _ _ => none
 
@@ -113,7 +113,7 @@ def manyCharsUntilWithPrev (test : Option Char → Char → Bool) : Parser Strin
   let ⟨res, pos⟩ := go it.1 it.2 ""
   .success ⟨_, pos⟩ res
 where
-  go {s : String} (str : String) (it : s.ValidPos) (acc : String) : String × s.ValidPos :=
+  go {s : String} (str : String) (it : s.Pos) (acc : String) : String × s.Pos :=
     if h : ¬it.IsAtEnd then
       let c := it.get h
       let prev : Option Char := if acc == "" then none else acc.back

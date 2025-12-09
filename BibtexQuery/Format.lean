@@ -123,7 +123,7 @@ def ProcessedEntry.ofEntry (e : Entry) : Except String (Option ProcessedEntry) :
       if x.name = "pubmed" ∨ x.name = "doi" ∨ x.name = "eprint" ∨ x.name.endsWith "url" then
         .ok (x.name, #[.normal s])
       else
-        match texContents ⟨s, s.startValidPos⟩ with
+        match texContents ⟨s, s.startPos⟩ with
         | .success _ arr => .ok (x.name, arr)
         | .error it err => .error s!"failed to run texContents on '{it.1}' at pos {Input.pos it}: {err}"
     let tags := Std.HashMap.ofList lst
