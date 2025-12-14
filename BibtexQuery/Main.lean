@@ -98,28 +98,28 @@ def main : List String → IO Unit
   | ["d", fname]    => do
     IO.println s!"Reading {fname} to find doubled keys"
     let s := ← IO.FS.readFile fname
-    let parsed := BibtexQuery.Parser.bibtexFile ⟨s, s.startValidPos⟩
+    let parsed := BibtexQuery.Parser.bibtexFile ⟨s, s.startPos⟩
     match parsed with
     | .success _pos res =>
       let lst := listDoublons res
       IO.println lst
-    | .error pos err => IO.eprintln s!"Parse error at line {lineNumberOfValidPos pos}: {err}"
+    | .error pos err => IO.eprintln s!"Parse error at line {lineNumberOfPos pos}: {err}"
   | ["l", fname]    => do
     let s := ← IO.FS.readFile fname
-    let parsed := BibtexQuery.Parser.bibtexFile ⟨s, s.startValidPos⟩
+    let parsed := BibtexQuery.Parser.bibtexFile ⟨s, s.startPos⟩
     match parsed with
     | .success _pos res => printEntries res
-    | .error pos err => IO.eprint s!"Parse error at line {lineNumberOfValidPos pos}: {err}"
+    | .error pos err => IO.eprint s!"Parse error at line {lineNumberOfPos pos}: {err}"
   | "q" :: (fname :: queries) => do
     let s := ← IO.FS.readFile fname
-    let parsed := BibtexQuery.Parser.bibtexFile ⟨s, s.startValidPos⟩
+    let parsed := BibtexQuery.Parser.bibtexFile ⟨s, s.startPos⟩
     match parsed with
     | .success _pos res => printMatchingEntries res $ queries.filterMap Query.ofString
-    | .error pos err => IO.eprint s!"Parse error at line {lineNumberOfValidPos pos}: {err}"
+    | .error pos err => IO.eprint s!"Parse error at line {lineNumberOfPos pos}: {err}"
   | "c" :: (fname :: queries) => do
     let s := ← IO.FS.readFile fname
-    let parsed := BibtexQuery.Parser.bibtexFile ⟨s, s.startValidPos⟩
+    let parsed := BibtexQuery.Parser.bibtexFile ⟨s, s.startPos⟩
     match parsed with
     | .success _pos res => printMatchingCitations res $ queries.filterMap Query.ofString
-    | .error pos err => IO.eprint s!"Parse error at line {lineNumberOfValidPos pos}: {err}"
+    | .error pos err => IO.eprint s!"Parse error at line {lineNumberOfPos pos}: {err}"
   | _            => do IO.eprintln "Invalid command-line arguments"; printHelp
