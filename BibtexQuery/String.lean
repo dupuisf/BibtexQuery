@@ -10,8 +10,13 @@ Author: Frédéric Dupuis
 This file contains various string processing functions.
 -/
 
-/-- Get the line number of the current position for ValidPos. -/
-def lineNumberOfValidPos (it : Sigma String.ValidPos) : Nat :=
+/-- Get the line number of the current position of the iterator. -/
+def String.Legacy.Iterator.lineNumber (it : String.Legacy.Iterator) : Nat :=
+  let s : Substring.Raw := ⟨it.toString, 0, it.pos⟩
+  s.foldl (fun n c => if c = '\n' then n+1 else n) 1
+
+/-- Get the line number of the current position for Pos. -/
+def lineNumberOfPos (it : Sigma String.Pos) : Nat :=
   let s : Substring.Raw := ⟨it.1, 0, it.2.offset⟩
   s.foldl (fun n c => if c = '\n' then n+1 else n) 1
 
@@ -133,37 +138,31 @@ def String.flattenWords (s : String) : String := s.foldl
 --#eval "Frédéric Dupuis, Marco {T}omamichel".flattenWords
 
 def String.splitIntoNames (s : String) : List String :=
-  (s.splitOn (sep := " and ")).map trim
+  (s.splitOn (sep := " and ")).map (String.Slice.copy ∘ trimAscii)
 
-def String.toLastName (s : String) : String :=
-  let s' := (s.splitToList (fun c => c = ',')).map trim
-  match s' with
-  | [s₁] => s₁
-  | (s₁ :: _) => s₁
-  | _ => ""
+def String.toLastName (s : String) : String.Slice :=
+  s.split ',' |>.find? (fun _ => true) |>.getD "".toSlice
 
 def String.toLastNames (s : String) : String :=
-  String.intercalate " " $ s.splitIntoNames.map String.toLastName
+  " ".toSlice.intercalate $ s.splitIntoNames.map String.toLastName
 
 /-- Standardize to "Firstname Lastname" -/
 def String.toFirstnameLastname (s : String) : String :=
-  let s' := (s.splitToList (fun c => c = ',')).map trim
-  match s' with
-  | [s₁] => s₁
-  | [s₁, s₂] => s₂ ++ " " ++ s₁
+  match s.split ',' |>.map String.Slice.trimAscii |>.toList with
+  | [s₁] => s₁.copy
+  | [s₁, s₂] => s₂.copy ++ " " ++ s₁
   | _ => ""
 
 def String.toFullNames (s : String) : String :=
 String.join $ (s.splitIntoNames.map String.toFirstnameLastname).map String.flattenWords
 
--- FIXME: use `String.Slice` instead of `Substring`.
 partial def Substring.Raw.containsSubstrStartingAt (s : Substring.Raw) (q : String) : Bool :=
   if (Substring.Raw.toString s).length = 0 then q.length = 0
   else if q.isPrefixOf (Substring.Raw.toString s) then true
   else (Substring.Raw.drop s 1).containsSubstrStartingAt q
 
 def String.containsSubstr (s : String) (q : String) : Bool :=
-  s.toSubstring.containsSubstrStartingAt q
+  s.toRawSubstring.containsSubstrStartingAt q
 
 def String.pad (s : String) (c : Char) (n : Nat) : String :=
-  (s ++ String.ofList (List.replicate n c)).take n
+  (s ++ String.ofList (List.replicate n c)).take n |>.copy
