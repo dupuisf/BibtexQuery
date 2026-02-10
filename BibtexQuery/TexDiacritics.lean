@@ -6,7 +6,7 @@ Author: Jz Pan
 
 import Std.Internal.Parsec
 import Std.Internal.Parsec.String
-import Lean.Data.Xml.Basic
+import BibtexQuery.Xml
 import UnicodeBasic
 
 /-!
@@ -20,7 +20,7 @@ and preserve other TeX commands.
 
 -/
 
-open Lean Xml Std.Internal.Parsec Std.Internal.Parsec.String Unicode
+open BibtexQuery.Xml Std.Internal.Parsec Std.Internal.Parsec.String Unicode
 
 namespace BibtexQuery.TexDiacritics
 
@@ -131,7 +131,7 @@ mutual
 
 open Std.TreeMap
 
-/-- Convert a TeX content to HTML, represented by an array of `Lean.Xml.Content`.
+/-- Convert a TeX content to HTML, represented by an array of `Xml.Content`.
 A few TeX commands can be converted to corresponding HTML. -/
 partial def toHtml (x : TexContent) : Array Content :=
   match x with

@@ -20,7 +20,7 @@ spaces and special characters before the queries are performed. In addition, the
 firstnamelastname. Hence, for example, "Dupuis, Frédéric" will match the query `a.ericdup`.
 -/
 
-open Lean BibtexQuery
+open BibtexQuery BibtexQuery.Xml
 
 def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
   let keysOnly := parseRes.filterMap (fun entry => match entry with
