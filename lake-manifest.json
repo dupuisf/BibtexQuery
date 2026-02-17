@@ -8,7 +8,7 @@
    "rev": "9484dd63d30bce157c7f98007a9f26ca4dfb7fb6",
    "name": "UnicodeBasic",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "main",
+   "inputRev": "v4.29.0-rc1",
    "inherited": false,
    "configFile": "lakefile.lean"}],
  "name": "BibtexQuery",
