@@ -6,7 +6,7 @@ Author: Jz Pan
 
 import BibtexQuery.Name
 import BibtexQuery.Entry
-import Lean.Data.Xml.Basic
+import BibtexQuery.Xml
 import Std.Data.HashMap
 import Std.Internal.Parsec
 import Std.Internal.Parsec.String
@@ -20,7 +20,7 @@ tag generating and sorting.
 
 -/
 
-open Lean Xml Std.Internal.Parsec Unicode BibtexQuery.TexDiacritics BibtexQuery.Name
+open BibtexQuery.Xml Std.Internal.Parsec Unicode BibtexQuery.TexDiacritics BibtexQuery.Name
 
 namespace BibtexQuery
 
