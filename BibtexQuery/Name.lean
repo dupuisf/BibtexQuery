@@ -21,7 +21,7 @@ return an array of `BibtexName`.
 
 -/
 
-open Lean Unicode BibtexQuery.TexDiacritics
+open BibtexQuery.Xml Unicode BibtexQuery.TexDiacritics
 
 namespace BibtexQuery.Name
 
