@@ -1,15 +1,16 @@
-{"version": "1.1.0",
+{"version": "1.2.0",
  "packagesDir": ".lake/packages",
  "packages":
  [{"url": "https://github.com/fgdorais/lean4-unicode-basic",
    "type": "git",
    "subDir": null,
-   "scope": "",
-   "rev": "9539e34e5cb2d52a6454d9b6218f6b6835cad071",
+   "scope": "fgdorais",
+   "rev": "869d78784cf1b82c87f023122449566961947d2e",
    "name": "UnicodeBasic",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "v4.29.0",
+   "inputRev": "869d78784cf1b82c87f023122449566961947d2e",
    "inherited": false,
    "configFile": "lakefile.lean"}],
  "name": "BibtexQuery",
- "lakeDir": ".lake"}
+ "lakeDir": ".lake",
+ "fixedToolchain": false}
