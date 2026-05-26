@@ -4,7 +4,7 @@ defaultTargets = ["BibtexQuery", "«bibtex-query»"]
 [[require]]
 name = "UnicodeBasic"
 scope = "fgdorais"
-rev = "main"
+rev = "v2.0.0"
 
 [[lean_lib]]
 name = "BibtexQuery"
