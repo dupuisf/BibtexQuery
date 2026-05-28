@@ -34,8 +34,7 @@ def listDoublons (parseRes : List BibtexQuery.Entry) : List String :=
         | some _ => ⟨hsh, (key :: lst)⟩)
   dupl
 
-def printHelp := IO.println
-"
+def printHelp := IO.println "
 bibtex-query - command-line bibtex file processor
 
 Usage: bibtex-query command filename [args]
