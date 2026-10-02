@@ -19,7 +19,7 @@ namespace BibtexQuery
 structure Tag where
   name : String
   content : String
-deriving Repr, Inhabited
+deriving Repr, Inhabited, BEq
 
 namespace Tag
 
@@ -36,7 +36,7 @@ inductive Entry where
   | stringType (content : String)
   | preambleType (content : String)
   | commentType
-deriving Repr, Inhabited
+deriving Repr, Inhabited, BEq
 
 namespace Entry
 
