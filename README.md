@@ -7,6 +7,8 @@ queries given as command-line parameters. Note that the entries are processed in
 spaces and special characters before the queries are performed. In addition, the list of authors is normalized to
 ``firstnamelastname``. Hence, for example, ``Dupuis, Frédéric`` will match the query ``a.ericdup``.
 
+The label of an entry (`[Doe12]`, for the `bibtex-query` output and for consumers such as doc-gen4) is generated from the authors and the year, as BibTeX's `alpha` style does; an entry's `shorthand` field, when present, replaces it, as in biblatex.
+
 Note that currently, only a subset of the official Bibtex format is supported; features such as `@string` macros and `crossref` inheritance are not supported. It is unclear whether this
 will ever be supported in the future.
 

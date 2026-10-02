@@ -2,6 +2,7 @@
 Tests for the Bibtex parser. Run with `lake build BibtexQueryTests`.
 -/
 import BibtexQuery.Parser
+import BibtexQuery.Format
 
 open BibtexQuery BibtexQuery.Parser BibtexQuery.ParsecExtra
 
@@ -79,5 +80,18 @@ def article (key : String) (tags : List (String × String)) : Entry :=
 #guard fails "@article{a, year = 2020}\n@article{b, year = }"
 #guard fails "@article{a, year = 2020}\n@"
 #guard fails "@article{a, year = 2020"
+
+-- Tags: generated from the authors and the year, with diacritics stripped as BibTeX's `alpha`
+-- style does; or the `shorthand` field, as in biblatex.
+def tagOf (e : Entry) : Option String := ((ProcessedEntry.ofEntry e).toOption.bind id).map (·.tag)
+
+#guard tagOf (article "Kol07" [("author", "Kollár, János"), ("year", "2007")]) == some "[Kol07]"
+#guard tagOf (article "Wło05" [("author", "Włodarczyk, Jarosław"), ("year", "2005")]) == some "[Wlo05]"
+#guard tagOf (article "Wło05" [("author", "Włodarczyk, Jarosław"), ("year", "2005"),
+    ("shorthand", "Wło05")]) == some "[Wło05]"
+#guard tagOf (article "k" [("author", "Doe, John"), ("year", "2012"), ("shorthand", " ")])
+  == some "[Doe12]"
+#guard tagOf (article "BM88" [("author", "Bierstone, Edward and Milman, Pierre D."),
+    ("year", "1988")]) == some "[BM88]"
 
 end BibtexQuery.Tests
