@@ -5,7 +5,7 @@
    "type": "git",
    "subDir": null,
    "scope": "fgdorais",
-   "rev": "a0470ae2c2b2c2dabd42f87b8880c9e81ad8172b",
+   "rev": "add01df7af4013f448d1222422af55c98f06f66f",
    "name": "UnicodeBasic",
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
