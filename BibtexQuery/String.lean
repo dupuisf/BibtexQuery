@@ -156,13 +156,5 @@ def String.toFirstnameLastname (s : String) : String :=
 def String.toFullNames (s : String) : String :=
 String.join $ (s.splitIntoNames.map String.toFirstnameLastname).map String.flattenWords
 
-partial def Substring.Raw.containsSubstrStartingAt (s : Substring.Raw) (q : String) : Bool :=
-  if (Substring.Raw.toString s).length = 0 then q.length = 0
-  else if q.isPrefixOf (Substring.Raw.toString s) then true
-  else (Substring.Raw.drop s 1).containsSubstrStartingAt q
-
-def String.containsSubstr (s : String) (q : String) : Bool :=
-  s.toRawSubstring.containsSubstrStartingAt q
-
 def String.pad (s : String) (c : Char) (n : Nat) : String :=
   (s ++ String.ofList (List.replicate n c)).take n |>.copy
