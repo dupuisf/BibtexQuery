@@ -12,3 +12,6 @@ name = "BibtexQuery"
 [[lean_exe]]
 name = "«bibtex-query»"
 root = "BibtexQuery.Main"
+
+[[lean_lib]]
+name = "BibtexQueryTests"
