@@ -33,11 +33,11 @@ def Query.ofString (s : String) : Option Query :=
 
 def Entry.matchQuery (e : Entry) (q : Query) : Bool :=
   match q with
-  | .key s => e.getKey.flattenWords.containsSubstr s
-  | .author s => e.getAuthors.toFullNames.containsSubstr s
-  | .title s => e.getTitle.flattenWords.containsSubstr s
-  | .word s => e.getKeywords.flattenWords.containsSubstr s
-  | .class s => e.getClass.flattenWords.containsSubstr s
+  | .key s => e.getKey.flattenWords.contains s
+  | .author s => e.getAuthors.toFullNames.contains s
+  | .title s => e.getTitle.flattenWords.contains s
+  | .word s => e.getKeywords.flattenWords.contains s
+  | .class s => e.getClass.flattenWords.contains s
 
 def Entry.matchQueries (e : Entry) (lq : List Query) : Bool :=
   lq.foldl (fun acc q => acc && e.matchQuery q) true
