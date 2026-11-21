@@ -7,8 +7,8 @@ queries given as command-line parameters. Note that the entries are processed in
 spaces and special characters before the queries are performed. In addition, the list of authors is normalized to
 ``firstnamelastname``. Hence, for example, ``Dupuis, Frédéric`` will match the query ``a.ericdup``.
 
-Note that currently, only a subset of the official Bibtex format is supported; features such as predefined strings and concatenation using ``#`` are not supported. It is unclear whether this
-will ever be supported in the future; I only wrote this to learn how to do "normal programming" in [Lean 4](https://github.com/leanprover/lean4/), and I don't personally use these Bibtex features.
+Note that currently, only a subset of the official Bibtex format is supported; features such as `@string` macros and `crossref` inheritance are not supported. It is unclear whether this
+will ever be supported in the future.
 
 ## Installation instructions
 
